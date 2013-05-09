@@ -1,33 +1,88 @@
+No data preprocessing
+Lowercase all words
+Lemmatize all words
+Stem document using PorterStemmer
+Remove punctuation in feature set
+Remove punctuation and stop words in feature set
+Lemmatize document, remove stop words in feature set
+Stem document using PorterStemmer, remove stop words in feature set
+Remove stop words in feature set
+
+
+Using 1000 the most frequent words as features
+All features were sometimes more constrained as described above each
+statistics.
+
 The results using binary "has('word')" features for 1000 most common words.
 With and without any preprocessing the results differs very little and very
 seldom from the values bellow.
 
-Accuracy: 0.69 - Precision: 0.63 - Recall: 0.97 - F-measure: 0.76
+Accuracy: 0.78 - Precision: 0.81 - Recall: 0.74 - F-measure: 0.77
 
 
 The results using a count-of-word features (how many times is a word in the text)
 All features has a form of "count('word')" : <number>
 
-Lowercase all words
 Accuracy: 0.69 - Precision: 0.73 - Recall: 0.60 - F-measure: 0.66
-
-Lemmatize all words
+Accuracy: 0.69 - Precision: 0.73 - Recall: 0.60 - F-measure: 0.66
 Accuracy: 0.69 - Precision: 0.74 - Recall: 0.60 - F-measure: 0.66
-
-Stem document using PorterStemmer
 Accuracy: 0.71 - Precision: 0.76 - Recall: 0.61 - F-measure: 0.68
-
-Remove punctuation in feature set
 Accuracy: 0.69 - Precision: 0.74 - Recall: 0.60 - F-measure: 0.66
-
-Remove punctuation and stop words in feature set
 Accuracy: 0.73 - Precision: 0.77 - Recall: 0.66 - F-measure: 0.71
-
-Lemmatize document, remove stop words in feature set
 Accuracy: 0.72 - Precision: 0.76 - Recall: 0.66 - F-measure: 0.70
-
-Stem document using PorterStemmer, remove stop words in feature set
 Accuracy: 0.75 - Precision: 0.79 - Recall: 0.67 - F-measure: 0.73
-
-Remove stop words in feature set
 Accuracy: 0.73 - Precision: 0.77 - Recall: 0.66 - F-measure: 0.71
+
+
+Using the best 1000 words using IDF weights
+All features were sometimes more constrained as described above each
+statistics.
+
+IDF weights are quite tricky. We can't simply take the most informative
+words because they does not provide any information for majority of the
+documents because they simply are not there. One way was to take the less
+informative, which exist in almost every document, so they should be ideal for
+classification.
+
+Using "has('word')" features
+df < N/2
+Samples: mental set ad twice beat street your pack disappear mix enjoy land sister went sen charm tough nice ground evil
+Accuracy: 0.78 - Precision: 0.81 - Recall: 0.74 - F-measure: 0.77
+Accuracy: 0.77 - Precision: 0.80 - Recall: 0.73 - F-measure: 0.76
+Accuracy: 0.72 - Precision: 0.75 - Recall: 0.68 - F-measure: 0.71
+Accuracy: 0.78 - Precision: 0.82 - Recall: 0.73 - F-measure: 0.77
+Accuracy: 0.78 - Precision: 0.82 - Recall: 0.73 - F-measure: 0.77
+Accuracy: 0.76 - Precision: 0.79 - Recall: 0.72 - F-measure: 0.75
+Accuracy: 0.75 - Precision: 0.77 - Recall: 0.71 - F-measure: 0.74
+Accuracy: 0.78 - Precision: 0.82 - Recall: 0.73 - F-measure: 0.77
+Accuracy: 0.78 - Precision: 0.82 - Recall: 0.73 - F-measure: 0.77
+
+df < 900
+Samples: words space elements need believe play main yet fails word director williams ve situation year return completely late want writers
+Accuracy: 0.79 - Precision: 0.82 - Recall: 0.72 - F-measure: 0.77
+
+df < 600
+Samples: mark depth stage invent seven appeal wrong match attempt camp member prof truth occur return beyond crowd dollar popular toward
+Accuracy: 0.77 - Precision: 0.77 - Recall: 0.70 - F-measure: 0.73
+
+df > 500
+samples: right first two place perform star world charact think old also least seem look one say ani know enough real
+Accuracy: 0.72 - Precision: 0.73 - Recall: 0.73 - F-measure: 0.73
+
+df > 400
+samples: would also movies people played during watch although only fun no want must lot actually don has better you
+Accuracy: 0.69 - Precision: 0.70 - Recall: 0.68 - F-measure: 0.69
+
+
+Using "count" features
+df < N/2
+Samples: act word success behind friend must unfortun wrong great bore thing hour john might actor open complet find origin humor
+Accuracy: 0.77 - Precision: 0.80 - Recall: 0.72 - F-measure: 0.76
+Accuracy: 0.75 - Precision: 0.79 - Recall: 0.69 - F-measure: 0.74
+Accuracy: 0.70 - Precision: 0.73 - Recall: 0.63 - F-measure: 0.68
+Accuracy: 0.77 - Precision: 0.80 - Recall: 0.71 - F-measure: 0.75
+Accuracy: 0.77 - Precision: 0.80 - Recall: 0.71 - F-measure: 0.75
+Accuracy: 0.75 - Precision: 0.77 - Recall: 0.70 - F-measure: 0.74
+Accuracy: 0.70 - Precision: 0.73 - Recall: 0.64 - F-measure: 0.68
+Accuracy: 0.76 - Precision: 0.79 - Recall: 0.71 - F-measure: 0.75
+Accuracy: 0.77 - Precision: 0.80 - Recall: 0.72 - F-measure: 0.76
