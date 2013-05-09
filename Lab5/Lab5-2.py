@@ -6,10 +6,31 @@ to run on PyPy. The time difference is between 10 - 12 times (that counts).
 @author: Seby, AtheIste
 """
 from __future__ import division, print_function
-import random,nltk,re
+import random
+import nltk
+import re
+from nltk.collocations import BigramCollocationFinder
+from nltk.collocations import TrigramCollocationFinder
+
 from nltk.corpus import movie_reviews
 from nltk.corpus import stopwords
 from collections import Counter
+from nltk import bigrams
+from nltk import trigrams
+
+
+#==============================================================================
+# bigram_measures = nltk.collocations.BigramAssocMeasures()
+# trigram_measures = nltk.collocations.TrigramAssocMeasures()
+# 
+# bifinder = BigramCollocationFinder.from_words(movie_reviews.words())
+# trifinder = TrigramCollocationFinder.from_words(movie_reviews.words())
+# 
+# bifinder.nbest(bigram_measures.pmi, 10)
+# trifinder.nbest(bigram_measures.pmi, 10)
+#==============================================================================
+
+
 
 documents = []
 for category in movie_reviews.categories():
@@ -26,9 +47,71 @@ l_stemmer = nltk.LancasterStemmer()
 
 
 #==============================================================================
+#  Create bigrams - trigrams - collocations
+#==============================================================================
+
+
+    
+def create_collocations(features_words):
+    collocations=[]
+    return collocations   
+
+
+#==============================================================================
 #  Create Sets Functions
 #  Document Features improved
 #==============================================================================
+
+def count_collates_features(document, coll):
+    features = {}
+    return features
+
+def has_collates_features(document, coll):
+    features = {}
+    return features
+
+def count_trigrams_features(document, trigr):
+    features = {}
+    for t in trigr:
+        summ = 0
+        for i in range(2,len(document)):
+            if((document[i-2],document[i-1],document[i]) == t):
+                summ+=1
+        features['count(%s,%s,%s)' % (document[i-2],document[i-1],document[i])] = summ
+    return features
+
+def count_bigrams_features(document, bigr):
+    features = {}
+    for b in bigr:
+        summ = 0
+        for i in range(1,len(document)):
+            if((document[i-1],document[i]) == b):
+                summ+=1
+        features['count(%s,%s)' % (document[i-1],document[i])] = summ
+    return features
+
+def has_trigrams_features(document, trigr):
+    features = {}
+    for t in trigr:
+        found = False
+        for i in range(1,len(document)):
+            if ((document[i-2],document[i-1],document[i]) == t):
+                found = True
+                break
+        features['has(%s)' % str(t)] = found      
+    return features
+    
+def has_bigrams_features(document, bigr):
+    features = {}
+    for b in bigr:
+        found = False
+        for i in range(1,len(document)):
+            if ((document[i-1],document[i]) == b):
+                found = True
+                break
+        features['has(%s)' % str(b)] = found      
+    return features
+
 
 def has_features(document, features_words):
     features = {}
@@ -46,14 +129,25 @@ def count_features(document, features_words):
 
 def create_sets(documents, features_words):
     featuresets = []
-
-    for document in documents:
+    bigr = bigrams(features_words)
+    trigr = trigrams(features_words)
+    coll = create_collocations(features_words)    
+    
+    l = len(documents)
+    for i in range(l):
+        print("Computing the feature set for document {0} of {1}".format(i,l))
         features = {}
-        #~ features.update(count_features(document[0], features_words))
-        features.update(has_features(document[0], features_words))
-
-        featuresets.append((features, document[1]))
-
+        #features.update(has_features(document[0], features_words))
+        #features.update(has_bigrams_features(document[0], bigr))
+        features.update(has_trigrams_features(documents[i][0], trigr))
+        #features.update(has_collates_features(document[0], collates))
+        #features.update(count_features(document[0], features_words))
+        #features.update(count_bigrams_features(document[0], bigr))
+        #features.update(count_trigrams_features(document[0], trigr))
+        #features.update(count_collates_features(document[0], collates)
+        
+        featuresets.append((features, documents[i][1]))
+        
     threshold = int(len(documents)*0.8)
     return [featuresets[:threshold],featuresets[threshold:]]
 
@@ -136,13 +230,13 @@ analysis_functions = [
     ((),                 (stopwords_remove, ),),
 ]
 
-SAMPLES = 5
+SAMPLES = 1
 for i in range(SAMPLES):
      random.shuffle(documents)
      results.append([])
      for doc_fs, feat_fs in analysis_functions:
          results[i].append(
-             analysis(documents, doc_fs, all_words.keys()[:1100], feat_fs))
+             analysis(documents, doc_fs, all_words.keys()[:1000], feat_fs))
 
 for col in range(len(analysis_functions)):
     sums = [0, 0, 0, 0]
