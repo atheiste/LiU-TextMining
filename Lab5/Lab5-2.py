@@ -198,15 +198,15 @@ l_stemmer = nltk.LancasterStemmer()
 results = []
 # (document/features preprocessing functions, features cleaning functions)
 analysis_functions = [
-    ((str.lower, ),      (freq_features, )),
-    ((),                 (freq_features, )),
-    #~ ((wnl.lemmatize, ),  (df_features, )),
-    #~ ((p_stemmer.stem, ), (df_features, )),
-    #~ ((),                 (punctuation_remove, df_features)),
-    #~ ((),                 (punctuation_remove, df_features)),
-    #~ ((wnl.lemmatize, ),  (stopwords_remove,   df_features)),
-    #~ ((p_stemmer.stem, ), (stopwords_remove,   df_features)),
-    #~ ((),                 (stopwords_remove,   df_features)),
+    ((str.lower, ),      (df_features, )),
+    ((),                 (df_features, )),
+    ((wnl.lemmatize, ),  (df_features, )),
+    ((p_stemmer.stem, ), (df_features, )),
+    ((),                 (punctuation_remove, df_features)),
+    ((),                 (punctuation_remove, df_features)),
+    ((wnl.lemmatize, ),  (stopwords_remove,   df_features)),
+    ((p_stemmer.stem, ), (stopwords_remove,   df_features)),
+    ((),                 (stopwords_remove,   df_features)),
 ]
 
 SAMPLES = 3
