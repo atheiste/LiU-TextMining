@@ -81,7 +81,7 @@ def count_features(document, features_words):
 ## Function which builds up training/testing set
 def create_sets(documents, features_words):
     featuresets = []
-    print( "length of features ", len(features_words) )
+    print( "Length of features ", len(features_words) )
     print( *random.sample(features_words, 15) )
     for document in documents:
         features = {}
@@ -125,6 +125,10 @@ def evaluate(classifier, test_set):
 #  Analysis function
 #==============================================================================
 def analysis(documents, document_preprocess, features, features_preprocess):
+    '''
+    Entry point to analysis, creates feature sets, trains a classificator and
+    calls evaluation
+    '''
     for f in document_preprocess:
         for i in range(len(documents)):
             documents[i][0] = map(f, documents[i][0])
@@ -146,16 +150,20 @@ def analysis(documents, document_preprocess, features, features_preprocess):
 #==============================================================================
 
 def freq_features(documents, features):
+    '''Keeps only 1000 the most frequent features'''
     return nltk.FreqDist(features).keys()[:1000]
 
 
 def df_features(documents, features):
-    features = set(features)
+    '''Removes unusable features based on DF value'''
+    features_set = set(features)
     N = len(documents) // 2
-    dfs = get_dfs(documents, features)
+    X = 600
+    dfs = get_dfs(documents, features_set)
     # sort according to idf value
     dfs.sort(key=lambda x: x[1], reverse=True)
-    return [x[0] for x in dropwhile(lambda x: x[1] > int(N * 1), dfs)][:1000]
+    # take only X words which has df < N
+    return [x[0] for x in dropwhile(lambda x: x[1] > int(N * 1), dfs)][:X]
 
 #==============================================================================
 #  Helper functions for features cleaning
@@ -181,23 +189,24 @@ def stopwords_remove(documents, features):
 #  Program main block
 #==============================================================================
 
+# Load documents in format [ (list(words ...), label), (list(words ...), label) ]
 documents = []
 for category in movie_reviews.categories():
     file_ids = movie_reviews.fileids(category)
     for fileid in file_ids:
         documents.append( [movie_reviews.words(fileid), category] )
 
-# set of all words across all documents
-feature_candidates = movie_reviews.words()
-print("Unique words: ", len(feature_candidates))
+# All words across all documents
+feature_candidates = movie_reviews.words()[:]
 
 wnl = nltk.WordNetLemmatizer()
 p_stemmer = nltk.PorterStemmer()
 l_stemmer = nltk.LancasterStemmer()
 
+# Define analysis mix
 results = []
-# (document/features preprocessing functions, features cleaning functions)
 analysis_functions = [
+    #(document&features preprocessing functions, features cleaning functions)
     ((str.lower, ),      (df_features, )),
     ((),                 (df_features, )),
     ((wnl.lemmatize, ),  (df_features, )),
@@ -209,18 +218,27 @@ analysis_functions = [
     ((),                 (stopwords_remove,   df_features)),
 ]
 
+#==============================================================================
+#  Run `SAMPLES` times every analyse mix from `analysis_functions` and save
+#  the result (tuple of accuracy, precision, recall, f-measure) to `results`
+#==============================================================================
 SAMPLES = 3
 for i in range(SAMPLES):
     random.shuffle(documents)
     results.append([])
     for doc_clean, feat_clean in analysis_functions:
-        result = analysis(documents, doc_clean, feature_candidates, feat_clean)
+        try:
+            result = analysis(documents, doc_clean, feature_candidates, feat_clean)
+        except Exception as e:
+            print(e)
+            result = (0,0,0,0)
         print ("Accuracy: {:.2f} - Precision: {:.2f} - Recall: {:.2f} - "
                 "F-measure: {:.2f}".format(*result))
         results[i].append(result)
     print("")
 print("")
 
+# Count mean and print the results
 for col in range(len(analysis_functions)):
     sums = [0, 0, 0, 0]
     for row in range(SAMPLES):
