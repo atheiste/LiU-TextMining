@@ -10,13 +10,12 @@ import random
 import nltk
 import re
 import math
-from nltk.collocations import BigramCollocationFinder
-from nltk.collocations import TrigramCollocationFinder
+#from nltk.collocations import BigramCollocationFinder
+#from nltk.collocations import TrigramCollocationFinder
 
 from nltk.corpus import movie_reviews
 from nltk.corpus import stopwords
 from collections import Counter, defaultdict
-from collections import Counter
 from nltk import bigrams
 from nltk import trigrams
 
@@ -119,12 +118,12 @@ def has_bigrams_features(document, bigr):
         features['has(%s)' % str(b)] = found      
     return features
 
-
 def has_features(document, features_words):
     '''Produces binary features "has('word'): <true|false>" '''
     features = {}
-    for word in document:
-        features['has(%s)' % word] = (word in features_words)
+    document = set(document)
+    for word in features_words:
+        features['has(%s)' % word] = (word in document)
     return features
 
 def count_features(document, features_words):
@@ -138,22 +137,22 @@ def count_features(document, features_words):
 ## Function which builds up training/testing set
 def create_sets(documents, features_words):
     featuresets = []
-    bigr = bigrams(features_words)
-    trigr = trigrams(features_words)
+    #bigr = bigrams(features_words)
+    #trigr = trigrams(features_words)
     #coll = create_collocations(features_words)    
     
     l = len(documents)
     for i in range(l):
-        print("Computing the feature set for document {0} of {1}".format(i,l))
+        print(".",end="")
         features = {}
-        #features.update(has_features(document[0], features_words))
-        features.update(has_bigrams_features(document[0], bigr))
+        features.update(has_features(documents[i][0], features_words))
+        #features.update(has_bigrams_features(documents[i][0], bigr))
         #features.update(has_trigrams_features(documents[i][0], trigr))
-        #features.update(has_collates_features(document[0], collates))
-        #features.update(count_features(document[0], features_words))
-        #features.update(count_bigrams_features(document[0], bigr))
-        #features.update(count_trigrams_features(document[0], trigr))
-        #features.update(count_collates_features(document[0], collates)
+        #features.update(has_collates_features(documents[i][0], collates))
+        #features.update(count_features(documents[i][0], features_words))
+        #features.update(count_bigrams_features(documents[i][0], bigr))
+        #features.update(count_trigrams_features(documents[i][0], trigr))
+        #features.update(count_collates_features(documents[i][0], collates)
         
         featuresets.append((features, documents[i][1]))
         
@@ -195,8 +194,8 @@ def evaluate(classifier, test_set):
 def analysis(documents, document_preprocess, features, features_preprocess):
     for f in document_preprocess:
         for i in range(len(documents)):
-            documents[i][0] = map(f, documents[i][0])
-        features = map(f, features)
+            documents[i][0] = filter(None,map(f, documents[i][0]))
+        features = filter(None,map(f,features))
 
     for feat_func in features_preprocess:
         features = feat_func(features)
@@ -206,18 +205,18 @@ def analysis(documents, document_preprocess, features, features_preprocess):
     classifier = nltk.NaiveBayesClassifier.train(train_set)
 
     x = evaluate(classifier, test_set)
-    #~ classifier.show_most_informative_features(n=20)
+    classifier.show_most_informative_features(n=20)
     return x
 
 #==============================================================================
 #  Features generators
 #==============================================================================
 
-def freq_features(features):
-    return nltk.FreqDist(features).keys()[:1000]
+def freq_features(words):
+    return nltk.FreqDist(words).keys()[:1000]
 
 
-def tf_idf_features(features):
+def tf_idf_features(words):
     # needs documents here :/
     global documents  # NOOOOOOOOO!!!!!!!!!!!! Blah!!!
 
@@ -225,21 +224,15 @@ def tf_idf_features(features):
 #  Helper functions for features cleaning
 #==============================================================================
 
-def punctuation_remove(features):
-    processed = []
-    for word in features:
-        processed.append(
-        ''.join([c for c in word.lower() if re.match("[a-z\-\' \n\t]", c)]))
-    return processed
+def punctuation_remove(feature):      
+    return ''.join([c for c in feature.lower() if re.match("[a-z\-\' \n\t]", c)]) 
 
 STOP_WORDS = stopwords.words('english')
-def stopwords_remove(features):
-    processed = []
-    for word in features:
-        if word.lower() in STOP_WORDS:
-            continue
-        processed.append(word)
-    return processed
+def stopwords_remove(feature):
+    if feature.lower() in STOP_WORDS:
+        return None    
+    else:
+        return feature
 
 #==============================================================================
 #  Program main block
@@ -253,29 +246,30 @@ for category in movie_reviews.categories():
 
 all_words = movie_reviews.words()[:]
 
-wnl = nltk.WordNetLemmatizer()
-p_stemmer = nltk.PorterStemmer()
-l_stemmer = nltk.LancasterStemmer()
+# wnl = nltk.WordNetLemmatizer()
+# p_stemmer = nltk.PorterStemmer()
+# l_stemmer = nltk.LancasterStemmer()
 
 results = []
-# (document/features preprocessing functions, features cleaning functions)
+# (document AND features preprocessing functions, features cleaning functions)
 analysis_functions = [
-    ((str.lower, ),      (freq_features, )),
-    ((wnl.lemmatize, ),  (freq_features, )),
-    ((p_stemmer.stem, ), (freq_features, )),
-    ((),                 (punctuation_remove, freq_features)),
-    ((),                 (punctuation_remove, freq_features)),
-    ((wnl.lemmatize, ),  (stopwords_remove,   freq_features)),
-    ((p_stemmer.stem, ), (stopwords_remove,   freq_features)),
-    ((),                 (stopwords_remove,   freq_features)),
-    ((),                 (freq_features, )),
+    ((),                                    (freq_features,)),
+    #((str.lower, ),                         (freq_features,)),
+    #((p_stemmer.stem, ),                    (freq_features,)),
+    #((l_stemmer.stem, ),                    (freq_features,)),
+    #((wnl.lemmatize, ),                     (freq_features,)),        
+    #((punctuation_remove,),                 (freq_features,)),
+    #((stopwords_remove,),                   (freq_features,)),
+    #((stopwords_remove, wnl.lemmatize, ),   (freq_features,)),
+    #((stopwords_remove, p_stemmer.stem, ),  (freq_features,)), 
 ]
 
-SAMPLES = 1
+SAMPLES = 10
 for i in range(SAMPLES):
      random.shuffle(documents)
      results.append([])
      for doc_clean, feat_clean in analysis_functions:
+         print("-------------------------------------------------")
          results[i].append(
              analysis(documents, doc_clean, all_words, feat_clean))
 
