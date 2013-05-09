@@ -1,4 +1,12 @@
-Results using binary "has('word')" features for 1000 most common words
+The results using binary "has('word')" features for 1000 most common words.
+With and without any preprocessing the results differs very little and very
+seldom from the values bellow.
+
+Accuracy: 0.69 - Precision: 0.63 - Recall: 0.97 - F-measure: 0.76
+
+
+The results using a count-of-word features (how many times is a word in the text)
+All features has a form of "count('word')" : <number>
 
 Lowercase all words
 Accuracy: 0.69 - Precision: 0.73 - Recall: 0.60 - F-measure: 0.66

@@ -9,41 +9,56 @@ from __future__ import division, print_function
 import random,nltk,re
 from nltk.corpus import movie_reviews
 from nltk.corpus import stopwords
-from collections import Counter
-
-documents = []
-for category in movie_reviews.categories():
-    file_ids = movie_reviews.fileids(category)
-    for fileid in file_ids:
-        documents.append( [movie_reviews.words(fileid), category] )
-
-all_words = nltk.FreqDist(w for w in movie_reviews.words())
-
-
-wnl = nltk.WordNetLemmatizer()
-p_stemmer = nltk.PorterStemmer()
-l_stemmer = nltk.LancasterStemmer()
+from collections import Counter, defaultdict
 
 
 #==============================================================================
-#  Create Sets Functions
+#  Helper functions
+#==============================================================================
+
+def build_inverted_index(documents, keywords):
+    '''
+    Build inverted index for each keyword in a form
+    {'keyword': {<document index>: TF, ..., 'df': DF, 'idf': IDF}, ...}
+    where TF is a frequency of keyword in a document, DF is number
+    of documents which contains the keyword and IDF is a measure of
+    informativeness of the keyword
+    '''
+    index = defaultdict(dict)
+    counters = [Counter(d) for d,c in documents]
+    N = len(documents)
+    for keyword in keywords:
+        df = 0
+        for i, counter in enumerate(counters):
+            if counter[keyword]:
+                index[keyword][i] = counter[keyword]
+                df += 1
+        index[keyword]['df'] = df
+        index[keyword]['idf'] = math.log(N / df, 10)
+    return index
+
+
+#==============================================================================
+#  Feature extractors
 #  Document Features improved
 #==============================================================================
 
 def has_features(document, features_words):
+    '''Produces binary features "has('word'): <true|false>" '''
     features = {}
     for word in document:
         features['has(%s)' % word] = (word in features_words)
     return features
 
 def count_features(document, features_words):
+    '''Produces count features "count('word'): <number>" '''
     features = {}
     counter = Counter(document)
     for word in features_words:
         features['count(%s)' % word] = counter[word]
     return features
 
-
+## Function which builds up training/testing set
 def create_sets(documents, features_words):
     featuresets = []
 
@@ -87,25 +102,40 @@ def evaluate(classifier, test_set):
 
 
 #==============================================================================
-#  Analysis definition
+#  Analysis function
 #==============================================================================
 def analysis(documents, document_preprocess, features, features_preprocess):
     for f in document_preprocess:
-        for i, document in enumerate(documents):
-            documents[i][0] = map(f, document[0])
+        for i in range(len(documents)):
+            documents[i][0] = map(f, documents[i][0])
         features = map(f, features)
 
     for feat_func in features_preprocess:
         features = feat_func(features)
-    features = set(features[:1000])
-#    features = features[:1000]
+    features = set(features)
 
     train_set, test_set = create_sets(documents, features)
     classifier = nltk.NaiveBayesClassifier.train(train_set)
 
     x = evaluate(classifier, test_set)
-    classifier.show_most_informative_features(n=20)
+    #~ classifier.show_most_informative_features(n=20)
     return x
+
+#==============================================================================
+#  Features generators
+#==============================================================================
+
+def freq_features(features):
+    return nltk.FreqDist(features).keys()[:1000]
+
+
+def tf_idf_features(features):
+    # needs documents here :/
+    global documents  # NOOOOOOOOO!!!!!!!!!!!! Blah!!!
+
+#==============================================================================
+#  Helper functions for features cleaning
+#==============================================================================
 
 def punctuation_remove(features):
     processed = []
@@ -123,26 +153,43 @@ def stopwords_remove(features):
         processed.append(word)
     return processed
 
+#==============================================================================
+#  Program main block
+#==============================================================================
+
+documents = []
+for category in movie_reviews.categories():
+    file_ids = movie_reviews.fileids(category)
+    for fileid in file_ids:
+        documents.append( [movie_reviews.words(fileid), category] )
+
+all_words = movie_reviews.words()[:]
+
+wnl = nltk.WordNetLemmatizer()
+p_stemmer = nltk.PorterStemmer()
+l_stemmer = nltk.LancasterStemmer()
+
 results = []
 # (document/features preprocessing functions, features cleaning functions)
 analysis_functions = [
-    ((str.lower, ),      (),),
-    ((wnl.lemmatize, ),  (),),
-    ((p_stemmer.stem, ), (),),
-    ((),                 (punctuation_remove, ),),
-    ((),                 (punctuation_remove, stopwords_remove),),
-    ((wnl.lemmatize, ),  (stopwords_remove, ),),
-    ((p_stemmer.stem, ), (stopwords_remove, ),),
-    ((),                 (stopwords_remove, ),),
+    ((str.lower, ),      (freq_features, )),
+    ((wnl.lemmatize, ),  (freq_features, )),
+    ((p_stemmer.stem, ), (freq_features, )),
+    ((),                 (punctuation_remove, freq_features)),
+    ((),                 (punctuation_remove, freq_features)),
+    ((wnl.lemmatize, ),  (stopwords_remove,   freq_features)),
+    ((p_stemmer.stem, ), (stopwords_remove,   freq_features)),
+    ((),                 (stopwords_remove,   freq_features)),
+    ((),                 (freq_features, )),
 ]
 
 SAMPLES = 5
 for i in range(SAMPLES):
      random.shuffle(documents)
      results.append([])
-     for doc_fs, feat_fs in analysis_functions:
+     for doc_clean, feat_clean in analysis_functions:
          results[i].append(
-             analysis(documents, doc_fs, all_words.keys()[:1100], feat_fs))
+             analysis(documents, doc_clean, all_words, feat_clean))
 
 for col in range(len(analysis_functions)):
     sums = [0, 0, 0, 0]
