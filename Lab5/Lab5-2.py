@@ -37,9 +37,8 @@ from nltk import trigrams
 #==============================================================================
 
 #==============================================================================
-#  Helper functions
+#  Did you use this function?
 #==============================================================================
-
 def build_inverted_index(documents, keywords):
     '''
     Build inverted index for each keyword in a form
@@ -73,21 +72,38 @@ def get_dfs(documents, keywords):
         df = 0
         for d in range(N):
             df += int(keyword in doc_sets[d])
-        idfs.append( (keyword, df) )
+        idfs.append( (keyword, math.log(N/df,10) ))
     return idfs
 
 #==============================================================================
-#  Features Function (document , words|bigrams|trigrams)
+#  Features Function (document , words|bigrams|trigrams|collocations|idfs)
 #  returning a dictionary
 #==============================================================================
 
-def count_collocations_features(document, coll):
+#==============================================================================
+# def df_features(documents, features):
+#     '''Removes unusable features based on DF value'''
+#     features_set = set(features)
+#     N = len(documents) // 2
+#     X = 600
+#     dfs = get_dfs(documents, features_set)
+#     # sort according to idf value
+#     dfs.sort(key=lambda x: x[1], reverse=True)
+#     # take only X words which has df < N
+#     return [x[0] for x in dropwhile(lambda x: x[1] > int(N * 1), dfs)][:X]
+#==============================================================================
+
+def tf_idf_features(document, idfs):
+    '''Produces value features "tf-idf('word1'): <value>" '''
     features = {}
+    counter = Counter(document)
+    for i in idfs:
+        tf = counter(i[0])
+        if tf > 0:
+            tf = (1+math.log(tf,10))
+        features['tf-idf(%s)',i[0]] = tf*i[1]
     return features
 
-def has_collocations_features(document, coll):
-    features = {}
-    return features
 
 def count_trigrams_features(document, trigr):
     '''Produces count features "count('word1','word2','word3'): <number>" '''
@@ -158,7 +174,8 @@ def create_sets(documents, features_words):
     print( list(features_words)[:10] )
     #bigr = bigrams(features_words)
     #trigr = trigrams(features_words)
-    #coll = create_collocations(features_words)    
+    #coll = create_collocations(features_words)   <----- TODO  
+    #idf = get_dfs(documents, features_words)    
     
     l = len(documents)
     for i in range(l):
@@ -170,7 +187,12 @@ def create_sets(documents, features_words):
         #features.update(count_features(documents[i][0], features_words))
         #features.update(count_bigrams_features(documents[i][0], bigr))
         #features.update(count_trigrams_features(documents[i][0], trigr))
-        #features.update(count_collates_features(documents[i][0], collates)
+        #features.update(count_collates_features(documents[i][0], collates))
+        #features.update(tf-idf_features(documents[i][0], idf))  <-----*
+        
+        
+        #  ------ *I didn't try the last one with tf-idf        
+                
         
         featuresets.append((features, documents[i][1]))
         
@@ -215,19 +237,18 @@ def analysis(documents, document_preprocess, features, features_preprocess):
     '''
 
 
-
-
-
     for f in document_preprocess:
         for i in range(len(documents)):
-            documents[i][0] = filter(None,map(f, documents[i][0]))
+            # is there any way to remove these filters? i use them because sometimes
+            # the f funcitons return a null -> see on line 280
+            documents[i][0] = filter(None,map(f, documents[i][0]))  
         features = filter(None,map(f,features))
+
+
 
     for feat_func in features_preprocess:
         features = feat_func(features)
     features = set(features)
-
-
 
 
     train_set, test_set = create_sets(documents, features)
@@ -244,32 +265,21 @@ def analysis(documents, document_preprocess, features, features_preprocess):
 def freq_features(features):
     '''Keeps only 1000 the most frequent features'''
     return nltk.FreqDist(features).keys()[:1000]
-
-
-def df_features(documents, features):
-    '''Removes unusable features based on DF value'''
-    features_set = set(features)
-    N = len(documents) // 2
-    X = 600
-    dfs = get_dfs(documents, features_set)
-    # sort according to idf value
-    dfs.sort(key=lambda x: x[1], reverse=True)
-    # take only X words which has df < N
-    return [x[0] for x in dropwhile(lambda x: x[1] > int(N * 1), dfs)][:X]
-
+    # why don't we use randomly chosen features instead of the first 1000?
 
 #==============================================================================
 #  Helper functions for features cleaning
 #==============================================================================
 
-def punctuation_remove(feature):      
+def punct_remove(feature):      
     return ''.join([c for c in feature.lower() if re.match("[a-z\-\' \n\t]", c)]) 
 
 STOP_WORDS = set(stopwords.words('english'))
-def stopwords_remove(feature):
+def stops_remove(feature):
     if feature.lower() in STOP_WORDS:
-        return None    
-    else:
+        return None   # <--- forced to return null because I'm working on single
+    else:             # words (in this way this function works as str.lower or
+                      # wln.lemmatize, the same happens for punct_remove)
         return feature
 
 #==============================================================================
@@ -294,15 +304,17 @@ l_stemmer = nltk.LancasterStemmer()
 results = []
 
 analysis_functions = [
-    ((),                                    (freq_features,)),
-    ((str.lower, ),                         (freq_features,)),
-    ((p_stemmer.stem, ),                    (freq_features,)),
-    ((l_stemmer.stem, ),                    (freq_features,)),
-    ((wnl.lemmatize, ),                     (freq_features,)),        
-    ((punctuation_remove,),                 (freq_features,)),
-    ((stopwords_remove,),                   (freq_features,)),
-    ((stopwords_remove, wnl.lemmatize, ),   (freq_features,)),
-    ((stopwords_remove, p_stemmer.stem, ),  (freq_features,)), 
+  # the first group is applied on both documents and features
+  # the second only on features
+    ((str.lower, ),                                     (freq_features,)),
+    ((p_stemmer.stem, ),                                (freq_features,)),
+    ((l_stemmer.stem, ),                                (freq_features,)),
+    ((wnl.lemmatize, ),                                 (freq_features,)),        
+    ((punct_remove,),                                   (freq_features,)),
+    ((stops_remove,),                                   (freq_features,)),
+    ((stops_remove, wnl.lemmatize, ),                   (freq_features,)),
+    ((stops_remove, p_stemmer.stem, ),                  (freq_features,)), 
+    ((stops_remove, wnl.lemmatize, punct_remove, ),     (freq_features,)), 
 ]
 
 
@@ -310,7 +322,7 @@ analysis_functions = [
 #  Run `SAMPLES` times every analyse mix from `analysis_functions` and save
 #  the result (tuple of accuracy, precision, recall, f-measure) to `results`
 #==============================================================================
-SAMPLES = 1
+SAMPLES = 10
 for i in range(SAMPLES):
     random.shuffle(documents)
     results.append([])
