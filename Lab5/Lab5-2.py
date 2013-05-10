@@ -7,66 +7,27 @@ to run on PyPy. The time difference is between 10 - 12 times (that counts).
 """
 from __future__ import division, print_function
 
-
-import nltk
-import random
-import re
-
-from itertools import dropwhile
-from nltk.corpus import movie_reviews
-from nltk.corpus import stopwords
-from collections import Counter, defaultdict
-
 import math
-from nltk.collocations import BigramCollocationFinder
-from nltk.collocations import TrigramCollocationFinder
+import nltk
+import re
+import random
+
+from collections import Counter
+
 from nltk import bigrams
 from nltk import trigrams
+from nltk.collocations import BigramCollocationFinder
+from nltk.collocations import TrigramCollocationFinder
+from nltk.corpus import movie_reviews
+from nltk.corpus import stopwords
 
-
+wnl = nltk.WordNetLemmatizer()
+p_stem = nltk.PorterStemmer()
+l_stem = nltk.LancasterStemmer()
 bigram_measures = nltk.collocations.BigramAssocMeasures()
 trigram_measures = nltk.collocations.TrigramAssocMeasures()
+STOP_WORDS = set(stopwords.words('english'))
 
-
-#==============================================================================
-#  Did you use this function?
-#==============================================================================
-def build_inverted_index(documents, keywords):
-    '''
-    Build inverted index for each keyword in a form
-    {'keyword': {<document index>: TF, ..., 'df': DF, 'idf': IDF}, ...}
-    where TF is a frequency of keyword in a document, DF is number
-    of documents which contains the keyword and IDF is a measure of
-    informativeness of the keyword
-    '''
-    index = defaultdict(dict)
-    counters = [Counter(d) for d,c in documents]
-    N = len(documents)
-    for keyword in keywords:
-        df = 0
-        for i, counter in enumerate(counters):
-            if counter[keyword]:
-                index[keyword][i] = counter[keyword]
-                df += 1
-        index[keyword]['df'] = df
-        index[keyword]['idf'] = math.log(N / df, 10)
-    return index
-
-def get_dfs(documents, keywords):
-    '''
-    Compute IDFS for every keyword
-    :rvalue: list( tuple(keyword, idf), tuple(keyword, idf) )
-    '''
-    idfs = []
-    doc_sets = [set(d) for d,c in documents]
-    N = len(documents)
-    for keyword in keywords:
-        df = 0
-        for d in range(N):
-            df += int(keyword in doc_sets[d])
-        if df > 0:    
-            idfs.append( (keyword, math.log(N/df,10) ))
-    return idfs
 
 #==============================================================================
 #                             Features Function 
@@ -165,7 +126,140 @@ def count_features(document, features_words):
 #                            End of Features Functions
 #==============================================================================
 
+#==============================================================================
+#  Create idfs for a set of keywords
+#==============================================================================
 
+def get_idfs(documents, keywords):
+    '''
+    Compute IDFS for every keyword
+    :rvalue: list( tuple(keyword, idf), tuple(keyword, idf) )
+    '''
+    idfs = []
+    doc_sets = [set(d) for d,c in documents]
+    N = len(documents)
+    for keyword in keywords:
+        df = 0
+        for d in range(N):
+            df += int(keyword in doc_sets[d])
+        if df > 0:    
+            idfs.append( (keyword, math.log(N/df,10) ))
+    return idfs
+
+#==============================================================================
+#  Features thresholding
+#==============================================================================
+
+def freq_filter(features):
+    '''Keeps only 1000 the most frequent features'''
+    return nltk.FreqDist(features).keys()[:1000]
+   
+
+#==============================================================================
+#  Collocations Creators 
+#==============================================================================
+
+def create_bi_collocations(features_words,document_preprocess):
+    finder = BigramCollocationFinder.from_words(movie_reviews.words())
+    finder.apply_freq_filter(3)
+    bicoll = finder.nbest(bigram_measures.pmi,1000)
+    for f in document_preprocess:
+        bicoll = [(f(a),f(b)) for (a,b) in bicoll if (f(a) and f(b))]
+    return bicoll
+
+def create_tri_collocations(features_words,document_preprocess):
+    finder = TrigramCollocationFinder.from_words(movie_reviews.words())
+    finder.apply_freq_filter(3)
+    tricoll = finder.nbest(trigram_measures.pmi,1000)
+    for f in document_preprocess:
+        tricoll = [(f(a),f(b)) for (a,b) in tricoll if (f(a) and f(b))]
+    return tricoll
+
+#==============================================================================
+#  Analysis function
+#==============================================================================
+def analysis(documents, document_preprocess, features_words, 
+             features_preprocess, features_func):
+    '''
+    Entry point to analysis, creates feature sets, trains a classificator and
+    calls evaluation
+    '''
+    
+# Preprocessing    
+    for f in document_preprocess:
+        for i in range(len(documents)):
+            documents[i][0] = filter(None,map(f, documents[i][0]))  
+        features_words = filter(None,map(f,features_words))
+
+    for feat_func in features_preprocess:
+        features_words = feat_func(features_words)
+    features_words = set(features_words)
+
+
+    featuresets = []
+    print( list(features_words)[:10] )
+    
+# Features creation
+    
+    if (("has_bigram" or "count_bigram") in features_func):
+        bigr = bigrams(features_words)
+    if (("has_trigram" or "count_trigram") in features_func):    
+        trigr = trigrams(features_words)
+    if (("has_bcoll" or "count_bcoll") in features_func):    
+        bcoll = create_bi_collocations(features_words,document_preprocess)    
+    if (("has_tcoll" or "count_tcoll") in features_func):    
+        tcoll = create_tri_collocations(features_words,document_preprocess)
+    if (("tf-idef") in features_func):    
+        idf = get_idfs(documents, features_words)    
+    
+    l = len(documents)
+    for i in range(l):
+        print(".",end="")
+        features = {}
+        
+        for f in features_func:
+            if f == "has_feature":
+                features.update(has_features(documents[i][0], features_words))
+            elif f == "has_bigram":
+                features.update(has_bigrams_features(documents[i][0], bigr))
+            elif f == "has_trigram":
+                features.update(has_trigrams_features(documents[i][0], trigr))
+
+            elif f == "has_bcoll":
+                features.update(has_bigrams_features(documents[i][0], bcoll))
+            elif f == "has_tcoll":
+                features.update(has_trigrams_features(documents[i][0], tcoll))
+            
+            elif f == "count_feature":
+                features.update(count_features(documents[i][0], features_words))
+            elif f == "count_bigram":
+                features.update(count_bigrams_features(documents[i][0], bigr))
+            elif f == "count_trigram":
+                features.update(count_trigrams_features(documents[i][0], trigr))
+            
+            elif f == "count_bcoll":
+                features.update(count_bigrams_features(documents[i][0], bcoll))
+            elif f == "count_tcoll":
+                features.update(count_trigrams_features(documents[i][0], tcoll))
+                
+            elif f == "tf-idf":
+                features.update(tf_idf_features(documents[i][0], idf))
+
+                
+        featuresets.append((features, documents[i][1]))
+        
+    threshold = int(len(documents)*0.8)
+    
+    train_set = featuresets[:threshold]
+    test_set = featuresets[threshold:]
+    print("")
+
+# Training    
+
+    classifier = nltk.NaiveBayesClassifier.train(train_set)
+    x = evaluate(classifier, test_set)
+    classifier.show_most_informative_features(n=20)
+    return x
 
 #==============================================================================
 #  Evaluate a classifier in terms of Accuracy, Precision, Recall, F-Measure
@@ -194,112 +288,19 @@ def evaluate(classifier, test_set):
 
     return [accuracy,precision,recall,f]
 
-#==============================================================================
-#  Collocations Creators 
-#==============================================================================
-
-def create_bi_collocations(features_words,document_preprocess):
-    finder = BigramCollocationFinder.from_words(movie_reviews.words())
-    finder.apply_freq_filter(3)
-    bicoll = finder.nbest(bigram_measures.pmi,1000)
-    for f in document_preprocess:
-        bicoll = [(f(a),f(b)) for (a,b) in bicoll if (f(a) and f(b))]
-    return bicoll
-
-def create_tri_collocations(features_words,document_preprocess):
-    finder = TrigramCollocationFinder.from_words(movie_reviews.words())
-    finder.apply_freq_filter(3)
-    tricoll = finder.nbest(trigram_measures.pmi,1000)
-    for f in document_preprocess:
-        tricoll = [(f(a),f(b)) for (a,b) in tricoll if (f(a) and f(b))]
-    return tricoll
 
 #==============================================================================
-#  Analysis function
-#==============================================================================
-def analysis(documents, document_preprocess, features_words, features_preprocess):
-    '''
-    Entry point to analysis, creates feature sets, trains a classificator and
-    calls evaluation
-    '''
-    
-    for f in document_preprocess:
-        for i in range(len(documents)):
-            # is there any way to remove these filters? i use them because sometimes
-            # the f funcitons return a null -> see on line 280
-            documents[i][0] = filter(None,map(f, documents[i][0]))  
-        features_words = filter(None,map(f,features_words))
-
-    for feat_func in features_preprocess:
-        features_words = feat_func(features_words)
-    features_words = set(features_words)
-
-
-    featuresets = []
-    print( "Length of features ", len(features_words) )
-    print( list(features_words)[:10] )
-    
-    # uncomment for full featuresets     
-    
-    #bigr = bigrams(features_words)
-    #trigr = trigrams(features_words)
-    #tcoll = create_tri_collocations(features_words,document_preprocess)
-    bcoll = create_bi_collocations(features_words,document_preprocess)    
-    #idf = get_dfs(documents, features_words)    
-    
-    l = len(documents)
-    for i in range(l):
-        features = {}
-        #features.update(has_features(documents[i][0], features_words))
-        #features.update(has_bigrams_features(documents[i][0], bigr))
-        #features.update(has_trigrams_features(documents[i][0], trigr))
-        features.update(has_bigrams_features(documents[i][0], bcoll))
-        #features.update(has_trigrams_features(documents[i][0], tcoll))                
-        #features.update(count_features(documents[i][0], features_words))
-        #features.update(count_bigrams_features(documents[i][0], bigr))
-        #features.update(count_trigrams_features(documents[i][0], trigr))
-        #features.update(count_bigrams_features(documents[i][0], bcoll))
-        #features.update(count_trigrams_features(documents[i][0], tcoll))
-        #features.update(tf_idf_features(documents[i][0], idf)) 
-        
-        
-             
-                
-        
-        featuresets.append((features, documents[i][1]))
-        
-    threshold = int(len(documents)*0.8)
-    
-    train_set = featuresets[:threshold]
-    test_set = featuresets[threshold:]
-    
-    classifier = nltk.NaiveBayesClassifier.train(train_set)
-    x = evaluate(classifier, test_set)
-    classifier.show_most_informative_features(n=20)
-    return x
-
-#==============================================================================
-#  Features generators
+#  Helper functions for feature cleaning
 #==============================================================================
 
-def freq_features(features):
-    '''Keeps only 1000 the most frequent features'''
-    return nltk.FreqDist(features).keys()[:1000]
-    # why don't we use randomly chosen features instead of the first 1000?
-
-#==============================================================================
-#  Helper functions for features cleaning
-#==============================================================================
-
-def punct_remove(feature):      
+def rm_punct(feature):      
     return ''.join([c for c in feature.lower() if re.match("[a-z\-\' \n\t]", c)]) 
 
-STOP_WORDS = set(stopwords.words('english'))
-def stops_remove(feature):
+
+def rm_stops(feature):
     if feature.lower() in STOP_WORDS:
-        return None   # <--- forced to return null because I'm working on single
-    else:             # words (in this way this function works as str.lower or
-                      # wln.lemmatize, the same happens for punct_remove)
+        return None   
+    else:
         return feature
 
 #==============================================================================
@@ -316,25 +317,47 @@ for category in movie_reviews.categories():
 # All words across all documents
 feature_candidates = movie_reviews.words()[:]
 
-wnl = nltk.WordNetLemmatizer()
-p_stemmer = nltk.PorterStemmer()
-l_stemmer = nltk.LancasterStemmer()
+
+
 
 # Define analysis mix
-results = []
-
 analysis_functions = [
-  # the first group is applied on both documents and features
-  # the second only on features
-    #((str.lower, ),                                     (freq_features,)),
-    #((p_stemmer.stem, ),                                (freq_features,)),
-    #((l_stemmer.stem, ),                                (freq_features,)),
-    #((wnl.lemmatize, ),                                 (freq_features,)),        
-    #((punct_remove,),                                   (freq_features,)),
-    #((stops_remove,),                                   (freq_features,)),
-    #((stops_remove, wnl.lemmatize, ),                   (freq_features,)),
-    #((stops_remove, p_stemmer.stem, ),                  (freq_features,)), 
-    ((stops_remove, wnl.lemmatize, punct_remove, ),     (freq_features,)), 
+  # in the first tuple we have the preprocessing function applied on 
+  # both documents and features
+  #
+  # Possible Values (1 or more):
+  #   - str.Lower 
+  #   - p_stem.stem 
+  #   - l_stem.stem
+  #   - wnl.lemmatize
+  #   - rm_punct
+  #   - rm_stops
+  #
+  # the second tuple contains the functions applied only on features
+  #
+  # Possible Values 
+  #   - freq_filter
+  #  
+  # the third tuble contains the kind of features to compute
+  #
+  # Possible Values (1 or more):
+  #   - "has_feature"
+  #   - "count_feature"
+  #   - "has_bigram"
+  #   - "count_bigram"
+  #   - "has_trigram"
+  #   - "count_trigram"
+  #   - "count_bcoll"
+  #   - "count_tcoll"
+  #   - "tf-idf"
+ 
+    ((str.lower, ),     (freq_filter,),     ("has_feature","count_feature",)),
+  #  ((p_stem.stem, ),   (freq_filter,),     ("has_feature",)),
+  #  ((l_stem.stem, ),   (freq_filter,),     ("has_feature",)),
+  #  ((wnl.lemmatize, ), (freq_filter,),     ("has_feature",)),        
+  #  ((rm_punct,),       (freq_filter,),     ("has_feature",)),
+    ((rm_stops,),       (freq_filter,),     ("has_feature",)),
+    
 ]
 
 
@@ -342,13 +365,15 @@ analysis_functions = [
 #  Run `SAMPLES` times every analyse mix from `analysis_functions` and save
 #  the result (tuple of accuracy, precision, recall, f-measure) to `results`
 #==============================================================================
-SAMPLES = 10
+SAMPLES = 1
+
+results = []
 for i in range(SAMPLES):
     random.shuffle(documents)
     results.append([])
-    for doc_clean, feat_clean in analysis_functions:
+    for doc_clean, feat_clean, features_func in analysis_functions:
         #try:
-        result = analysis(documents, doc_clean, feature_candidates, feat_clean)
+        result = analysis(documents, doc_clean, feature_candidates, feat_clean, features_func)
         #except Exception as e:
          #   print(e)
          #   result = (0,0,0,0)
@@ -360,6 +385,12 @@ print("")
 
 
 
+print ("-"*106)
+print ("| {:<10}\t| {:<10}\t| {:<10}\t| {:<10}\t| {:<55}|".format("Acc.","Prec.","Rec.","F-Meas.","Setup"))
+print ("-"*106)
+    
+   
+
 for col in range(len(analysis_functions)):
     sums = [0, 0, 0, 0]
     for row in range(SAMPLES):
@@ -368,9 +399,12 @@ for col in range(len(analysis_functions)):
 
     for i in range(len(sums)):
         sums[i] /= SAMPLES
-
-    print ("Accuracy: {:.2f} - Precision: {:.2f} - Recall: {:.2f} - "
-           "F-measure: {:.2f}".format(*sums))
-
+    descr = " ".join(elem.__name__ for elem in analysis_functions[col][0]) + " " + " ".join(elem.__name__ for elem in analysis_functions[col][1]) + " " + " ".join(elem for elem in analysis_functions[col][2])    
+    print ("| {0:1.2f}\t| {1:1.2f}\t| {2:1.2f}\t| {3:1.2f}\t| {4:<55}|".format(
+        sums[0],sums[1],sums[2],sums[3],descr[:50])
+    )  
+         
+print ("-"*106)
+    
 
 
