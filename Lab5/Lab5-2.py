@@ -72,12 +72,14 @@ def get_dfs(documents, keywords):
         df = 0
         for d in range(N):
             df += int(keyword in doc_sets[d])
-        idfs.append( (keyword, math.log(N/df,10) ))
+        if df > 0:    
+            idfs.append( (keyword, math.log(N/df,10) ))
     return idfs
 
 #==============================================================================
-#  Features Function (document , words|bigrams|trigrams|collocations|idfs)
-#  returning a dictionary
+#                             Features Function 
+#           (document , words|bigrams|trigrams|collocations|idfs)
+#                           returning a dictionary
 #==============================================================================
 
 #==============================================================================
@@ -98,10 +100,10 @@ def tf_idf_features(document, idfs):
     features = {}
     counter = Counter(document)
     for i in idfs:
-        tf = counter(i[0])
+        tf = counter[i[0]]
         if tf > 0:
             tf = (1+math.log(tf,10))
-        features['tf-idf(%s)',i[0]] = tf*i[1]
+        features['tf-idf(%s)' % (i[0])] = tf*i[1]
     return features
 
 
@@ -167,20 +169,28 @@ def count_features(document, features_words):
         features['count({})'.format(word)] = counter[word]
     return features
 
+#==============================================================================
+#                            End of Features Functions
+#==============================================================================
+
+
 ## Function which builds up training/testing set
 def create_sets(documents, features_words):
     featuresets = []
     print( "Length of features ", len(features_words) )
     print( list(features_words)[:10] )
+    
+    # uncomment for full featuresets     
+    
     #bigr = bigrams(features_words)
     #trigr = trigrams(features_words)
     #coll = create_collocations(features_words)   <----- TODO  
-    #idf = get_dfs(documents, features_words)    
+    idf = get_dfs(documents, features_words)    
     
     l = len(documents)
     for i in range(l):
         features = {}
-        features.update(has_features(documents[i][0], features_words))
+        #features.update(has_features(documents[i][0], features_words))
         #features.update(has_bigrams_features(documents[i][0], bigr))
         #features.update(has_trigrams_features(documents[i][0], trigr))
         #features.update(has_collates_features(documents[i][0], collates))
@@ -188,10 +198,10 @@ def create_sets(documents, features_words):
         #features.update(count_bigrams_features(documents[i][0], bigr))
         #features.update(count_trigrams_features(documents[i][0], trigr))
         #features.update(count_collates_features(documents[i][0], collates))
-        #features.update(tf-idf_features(documents[i][0], idf))  <-----*
+        features.update(tf_idf_features(documents[i][0], idf)) # <-----*
         
         
-        #  ------ *I didn't try the last one with tf-idf        
+             
                 
         
         featuresets.append((features, documents[i][1]))
@@ -255,7 +265,7 @@ def analysis(documents, document_preprocess, features, features_preprocess):
     classifier = nltk.NaiveBayesClassifier.train(train_set)
 
     x = evaluate(classifier, test_set)
-    #classifier.show_most_informative_features(n=20)
+    classifier.show_most_informative_features(n=20)
     return x
 
 #==============================================================================
@@ -306,14 +316,14 @@ results = []
 analysis_functions = [
   # the first group is applied on both documents and features
   # the second only on features
-    ((str.lower, ),                                     (freq_features,)),
-    ((p_stemmer.stem, ),                                (freq_features,)),
-    ((l_stemmer.stem, ),                                (freq_features,)),
-    ((wnl.lemmatize, ),                                 (freq_features,)),        
-    ((punct_remove,),                                   (freq_features,)),
-    ((stops_remove,),                                   (freq_features,)),
-    ((stops_remove, wnl.lemmatize, ),                   (freq_features,)),
-    ((stops_remove, p_stemmer.stem, ),                  (freq_features,)), 
+    #((str.lower, ),                                     (freq_features,)),
+    #((p_stemmer.stem, ),                                (freq_features,)),
+    #((l_stemmer.stem, ),                                (freq_features,)),
+    #((wnl.lemmatize, ),                                 (freq_features,)),        
+    #((punct_remove,),                                   (freq_features,)),
+    #((stops_remove,),                                   (freq_features,)),
+    #((stops_remove, wnl.lemmatize, ),                   (freq_features,)),
+    #((stops_remove, p_stemmer.stem, ),                  (freq_features,)), 
     ((stops_remove, wnl.lemmatize, punct_remove, ),     (freq_features,)), 
 ]
 
