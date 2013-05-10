@@ -18,23 +18,15 @@ from nltk.corpus import stopwords
 from collections import Counter, defaultdict
 
 import math
-#from nltk.collocations import BigramCollocationFinder
-#from nltk.collocations import TrigramCollocationFinder
-
+from nltk.collocations import BigramCollocationFinder
+from nltk.collocations import TrigramCollocationFinder
 from nltk import bigrams
 from nltk import trigrams
 
 
-#==============================================================================
-# bigram_measures = nltk.collocations.BigramAssocMeasures()
-# trigram_measures = nltk.collocations.TrigramAssocMeasures()
-# 
-# bifinder = BigramCollocationFinder.from_words(movie_reviews.words())
-# trifinder = TrigramCollocationFinder.from_words(movie_reviews.words())
-# 
-# bifinder.nbest(bigram_measures.pmi, 10)
-# trifinder.nbest(bigram_measures.pmi, 10)
-#==============================================================================
+bigram_measures = nltk.collocations.BigramAssocMeasures()
+trigram_measures = nltk.collocations.TrigramAssocMeasures()
+
 
 #==============================================================================
 #  Did you use this function?
@@ -174,40 +166,6 @@ def count_features(document, features_words):
 #==============================================================================
 
 
-## Function which builds up training/testing set
-def create_sets(documents, features_words):
-    featuresets = []
-    print( "Length of features ", len(features_words) )
-    print( list(features_words)[:10] )
-    
-    # uncomment for full featuresets     
-    
-    #bigr = bigrams(features_words)
-    #trigr = trigrams(features_words)
-    #coll = create_collocations(features_words)   <----- TODO  
-    idf = get_dfs(documents, features_words)    
-    
-    l = len(documents)
-    for i in range(l):
-        features = {}
-        #features.update(has_features(documents[i][0], features_words))
-        #features.update(has_bigrams_features(documents[i][0], bigr))
-        #features.update(has_trigrams_features(documents[i][0], trigr))
-        #features.update(has_collates_features(documents[i][0], collates))
-        #features.update(count_features(documents[i][0], features_words))
-        #features.update(count_bigrams_features(documents[i][0], bigr))
-        #features.update(count_trigrams_features(documents[i][0], trigr))
-        #features.update(count_collates_features(documents[i][0], collates))
-        features.update(tf_idf_features(documents[i][0], idf)) # <-----*
-        
-        
-             
-                
-        
-        featuresets.append((features, documents[i][1]))
-        
-    threshold = int(len(documents)*0.8)
-    return [featuresets[:threshold], featuresets[threshold:]]
 
 #==============================================================================
 #  Evaluate a classifier in terms of Accuracy, Precision, Recall, F-Measure
@@ -236,34 +194,86 @@ def evaluate(classifier, test_set):
 
     return [accuracy,precision,recall,f]
 
+#==============================================================================
+#  Collocations Creators 
+#==============================================================================
+
+def create_bi_collocations(features_words,document_preprocess):
+    finder = BigramCollocationFinder.from_words(movie_reviews.words())
+    finder.apply_freq_filter(3)
+    bicoll = finder.nbest(bigram_measures.pmi,1000)
+    for f in document_preprocess:
+        bicoll = [(f(a),f(b)) for (a,b) in bicoll if (f(a) and f(b))]
+    return bicoll
+
+def create_tri_collocations(features_words,document_preprocess):
+    finder = TrigramCollocationFinder.from_words(movie_reviews.words())
+    finder.apply_freq_filter(3)
+    tricoll = finder.nbest(trigram_measures.pmi,1000)
+    for f in document_preprocess:
+        tricoll = [(f(a),f(b)) for (a,b) in tricoll if (f(a) and f(b))]
+    return tricoll
 
 #==============================================================================
 #  Analysis function
 #==============================================================================
-def analysis(documents, document_preprocess, features, features_preprocess):
+def analysis(documents, document_preprocess, features_words, features_preprocess):
     '''
     Entry point to analysis, creates feature sets, trains a classificator and
     calls evaluation
     '''
-
-
+    
     for f in document_preprocess:
         for i in range(len(documents)):
             # is there any way to remove these filters? i use them because sometimes
             # the f funcitons return a null -> see on line 280
             documents[i][0] = filter(None,map(f, documents[i][0]))  
-        features = filter(None,map(f,features))
-
-
+        features_words = filter(None,map(f,features_words))
 
     for feat_func in features_preprocess:
-        features = feat_func(features)
-    features = set(features)
+        features_words = feat_func(features_words)
+    features_words = set(features_words)
 
 
-    train_set, test_set = create_sets(documents, features)
+    featuresets = []
+    print( "Length of features ", len(features_words) )
+    print( list(features_words)[:10] )
+    
+    # uncomment for full featuresets     
+    
+    #bigr = bigrams(features_words)
+    #trigr = trigrams(features_words)
+    #tcoll = create_tri_collocations(features_words,document_preprocess)
+    bcoll = create_bi_collocations(features_words,document_preprocess)    
+    #idf = get_dfs(documents, features_words)    
+    
+    l = len(documents)
+    for i in range(l):
+        features = {}
+        #features.update(has_features(documents[i][0], features_words))
+        #features.update(has_bigrams_features(documents[i][0], bigr))
+        #features.update(has_trigrams_features(documents[i][0], trigr))
+        features.update(has_bigrams_features(documents[i][0], bcoll))
+        #features.update(has_trigrams_features(documents[i][0], tcoll))                
+        #features.update(count_features(documents[i][0], features_words))
+        #features.update(count_bigrams_features(documents[i][0], bigr))
+        #features.update(count_trigrams_features(documents[i][0], trigr))
+        #features.update(count_bigrams_features(documents[i][0], bcoll))
+        #features.update(count_trigrams_features(documents[i][0], tcoll))
+        #features.update(tf_idf_features(documents[i][0], idf)) 
+        
+        
+             
+                
+        
+        featuresets.append((features, documents[i][1]))
+        
+    threshold = int(len(documents)*0.8)
+    
+    train_set = featuresets[:threshold]
+    test_set = featuresets[threshold:]
+    
     classifier = nltk.NaiveBayesClassifier.train(train_set)
-
     x = evaluate(classifier, test_set)
     classifier.show_most_informative_features(n=20)
     return x
@@ -337,11 +347,11 @@ for i in range(SAMPLES):
     random.shuffle(documents)
     results.append([])
     for doc_clean, feat_clean in analysis_functions:
-        try:
-            result = analysis(documents, doc_clean, feature_candidates, feat_clean)
-        except Exception as e:
-            print(e)
-            result = (0,0,0,0)
+        #try:
+        result = analysis(documents, doc_clean, feature_candidates, feat_clean)
+        #except Exception as e:
+         #   print(e)
+         #   result = (0,0,0,0)
         print ("Accuracy: {:.2f} - Precision: {:.2f} - Recall: {:.2f} - "
                 "F-measure: {:.2f}".format(*result))
         results[i].append(result)
