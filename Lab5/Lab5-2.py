@@ -3,7 +3,8 @@
 The application was optimized to run using PyPy 2.0 so we strongly recommend
 to run on PyPy. The time difference is between 10 - 12 times (that counts).
 
-@author: Seby, AtheIste
+Laboratory 5 
+@author: seby912 & tompe625
 """
 from __future__ import division, print_function
 
@@ -13,7 +14,7 @@ import re
 import random
 
 from collections import Counter
-
+from itertools import dropwhile
 from nltk import bigrams
 from nltk import trigrams
 from nltk.collocations import BigramCollocationFinder
@@ -35,18 +36,16 @@ STOP_WORDS = set(stopwords.words('english'))
 #                           returning a dictionary
 #==============================================================================
 
-#==============================================================================
-# def df_features(documents, features):
-#     '''Removes unusable features based on DF value'''
-#     features_set = set(features)
-#     N = len(documents) // 2
-#     X = 600
-#     dfs = get_dfs(documents, features_set)
-#     # sort according to idf value
-#     dfs.sort(key=lambda x: x[1], reverse=True)
-#     # take only X words which has df < N
-#     return [x[0] for x in dropwhile(lambda x: x[1] > int(N * 1), dfs)][:X]
-#==============================================================================
+def df_features(documents, features):
+     '''Removes unusable features based on DF value'''
+     features_set = set(features)
+     N = len(documents) // 2
+     X = 600
+     dfs = get_idfs(documents, features_set)
+     # sort according to idf value
+     dfs.sort(key=lambda x: x[1], reverse=True)
+     # take only X words which has df < N
+     return [x[0] for x in dropwhile(lambda x: x[1] > int(N * 1), dfs)][:X]
 
 def tf_idf_features(document, idfs):
     '''Produces value features "tf-idf('word1'): <value>" '''
@@ -172,7 +171,7 @@ def create_tri_collocations(features_words,document_preprocess):
     finder.apply_freq_filter(3)
     tricoll = finder.nbest(trigram_measures.pmi,1000)
     for f in document_preprocess:
-        tricoll = [(f(a),f(b)) for (a,b) in tricoll if (f(a) and f(b))]
+        tricoll = [(f(a),f(b),f(c)) for (a,b,c) in tricoll if (f(a) and f(b) and f(c))]
     return tricoll
 
 #==============================================================================
@@ -200,6 +199,11 @@ def analysis(documents, document_preprocess, features_words,
     print( list(features_words)[:10] )
     
 # Features creation
+    bigr=[] 
+    trigr=[]
+    bcoll=[]    
+    tcoll=[]
+    idf=[]    
     
     if (("has_bigram" or "count_bigram") in features_func):
         bigr = bigrams(features_words)
@@ -349,15 +353,42 @@ analysis_functions = [
   #   - "count_trigram"
   #   - "count_bcoll"
   #   - "count_tcoll"
+  #   - "has_bcoll"
+  #   - "has_tcoll"
   #   - "tf-idf"
  
-    ((str.lower, ),     (freq_filter,),     ("has_feature","count_feature",)),
-  #  ((p_stem.stem, ),   (freq_filter,),     ("has_feature",)),
-  #  ((l_stem.stem, ),   (freq_filter,),     ("has_feature",)),
-  #  ((wnl.lemmatize, ), (freq_filter,),     ("has_feature",)),        
-  #  ((rm_punct,),       (freq_filter,),     ("has_feature",)),
-    ((rm_stops,),       (freq_filter,),     ("has_feature",)),
-    
+ 
+ # a-b)
+#==============================================================================
+#     ((str.lower, ),     (freq_filter,),     ("has_feature",)),
+#     ((p_stem.stem, ),   (freq_filter,),     ("has_feature",)),
+#     ((l_stem.stem, ),   (freq_filter,),     ("has_feature",)),
+#     ((wnl.lemmatize, ), (freq_filter,),     ("has_feature",)),        
+#     ((rm_punct,),       (freq_filter,),     ("has_feature",)),
+#     ((rm_stops,),       (freq_filter,),     ("has_feature",)),
+#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("has_feature",)),
+#     ((rm_stops,wnl.lemmatize, ),       (freq_filter,),     ("has_feature",)),
+#     ((rm_punct,p_stem.stem, ),       (freq_filter,),     ("has_feature",)),
+#     ((rm_punct,wnl.lemmatize, ),       (freq_filter,),     ("has_feature",)),
+#==============================================================================
+ 
+ 
+#==============================================================================
+#  # c)
+#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("has_feature",)),
+#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("has_bigram",)),
+#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("has_trigram",)),
+#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("has_bcoll",)),
+#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("has_tcoll",)),
+#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("count_feature",)),
+#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("count_bigram",)),
+#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("count_trigram",)),
+#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("count_bcoll",)),
+#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("count_tcoll",)),
+#==============================================================================
+
+#d
+    ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("tf-idf",)),
 ]
 
 
@@ -365,7 +396,7 @@ analysis_functions = [
 #  Run `SAMPLES` times every analyse mix from `analysis_functions` and save
 #  the result (tuple of accuracy, precision, recall, f-measure) to `results`
 #==============================================================================
-SAMPLES = 1
+SAMPLES = 10
 
 results = []
 for i in range(SAMPLES):
