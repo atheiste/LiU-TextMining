@@ -7,6 +7,7 @@ to run on PyPy. The time difference is between 10 - 12 times (that counts).
 """
 from __future__ import division, print_function
 
+
 import nltk
 import random
 import re
@@ -16,6 +17,24 @@ from nltk.corpus import movie_reviews
 from nltk.corpus import stopwords
 from collections import Counter, defaultdict
 
+import math
+#from nltk.collocations import BigramCollocationFinder
+#from nltk.collocations import TrigramCollocationFinder
+
+from nltk import bigrams
+from nltk import trigrams
+
+
+#==============================================================================
+# bigram_measures = nltk.collocations.BigramAssocMeasures()
+# trigram_measures = nltk.collocations.TrigramAssocMeasures()
+# 
+# bifinder = BigramCollocationFinder.from_words(movie_reviews.words())
+# trifinder = TrigramCollocationFinder.from_words(movie_reviews.words())
+# 
+# bifinder.nbest(bigram_measures.pmi, 10)
+# trifinder.nbest(bigram_measures.pmi, 10)
+#==============================================================================
 
 #==============================================================================
 #  Helper functions
@@ -57,15 +76,69 @@ def get_dfs(documents, keywords):
         idfs.append( (keyword, df) )
     return idfs
 
+#==============================================================================
+#  Features Function (document , words|bigrams|trigrams)
+#  returning a dictionary
+#==============================================================================
 
-#==============================================================================
-#  Feature extractors
-#  Document Features improved
-#==============================================================================
+def count_collocations_features(document, coll):
+    features = {}
+    return features
+
+def has_collocations_features(document, coll):
+    features = {}
+    return features
+
+def count_trigrams_features(document, trigr):
+    '''Produces count features "count('word1','word2','word3'): <number>" '''
+    features = {}
+    for t in trigr:
+        summ = 0
+        for i in range(2,len(document)):
+            if((document[i-2],document[i-1],document[i]) == t):
+                summ+=1
+        features['count(%s,%s,%s)' % (document[i-2],document[i-1],document[i])] = summ
+    return features
+
+def count_bigrams_features(document, bigr):
+    '''Produces count features "count('word1','word2'): <number>" '''
+    features = {}
+    for b in bigr:
+        summ = 0
+        for i in range(1,len(document)):
+            if((document[i-1],document[i]) == b):
+                summ+=1
+        features['count(%s,%s)' % (document[i-1],document[i])] = summ
+    return features
+
+def has_trigrams_features(document, trigr):
+    '''Produces binary features "has('word1','word2','word3'): <true|false>" '''
+    features = {}
+    for t in trigr:
+        found = False
+        for i in range(1,len(document)):
+            if ((document[i-2],document[i-1],document[i]) == t):
+                found = True
+                break
+        features['has(%s)' % str(t)] = found      
+    return features
+    
+def has_bigrams_features(document, bigr):
+    '''Produces binary features "has('word1','word2'): <true|false>" '''
+    features = {}
+    for b in bigr:
+        found = False
+        for i in range(1,len(document)):
+            if ((document[i-1],document[i]) == b):
+                found = True
+                break
+        features['has(%s)' % str(b)] = found      
+    return features
 
 def has_features(document, features_words):
     '''Produces binary features "has('word'): <true|false>" '''
     features = {}
+    document = set(document)
     for word in features_words:
         features['has({})'.format(word)] = (word in document)
     return features
@@ -82,14 +155,25 @@ def count_features(document, features_words):
 def create_sets(documents, features_words):
     featuresets = []
     print( "Length of features ", len(features_words) )
-    print( *random.sample(features_words, 15) )
-    for document in documents:
+    print( list(features_words)[:10] )
+    #bigr = bigrams(features_words)
+    #trigr = trigrams(features_words)
+    #coll = create_collocations(features_words)    
+    
+    l = len(documents)
+    for i in range(l):
         features = {}
-        #~ features.update(count_features(document[0], features_words))
-        features.update(has_features(document[0], features_words))
-
-        featuresets.append((features, document[1]))
-
+        features.update(has_features(documents[i][0], features_words))
+        #features.update(has_bigrams_features(documents[i][0], bigr))
+        #features.update(has_trigrams_features(documents[i][0], trigr))
+        #features.update(has_collates_features(documents[i][0], collates))
+        #features.update(count_features(documents[i][0], features_words))
+        #features.update(count_bigrams_features(documents[i][0], bigr))
+        #features.update(count_trigrams_features(documents[i][0], trigr))
+        #features.update(count_collates_features(documents[i][0], collates)
+        
+        featuresets.append((features, documents[i][1]))
+        
     threshold = int(len(documents)*0.8)
     return [featuresets[:threshold], featuresets[threshold:]]
 
@@ -129,27 +213,35 @@ def analysis(documents, document_preprocess, features, features_preprocess):
     Entry point to analysis, creates feature sets, trains a classificator and
     calls evaluation
     '''
+
+
+
+
+
     for f in document_preprocess:
         for i in range(len(documents)):
-            documents[i][0] = map(f, documents[i][0])
-        features = map(f, features)
+            documents[i][0] = filter(None,map(f, documents[i][0]))
+        features = filter(None,map(f,features))
 
     for feat_func in features_preprocess:
-        features = feat_func(documents, features)
+        features = feat_func(features)
     features = set(features)
+
+
+
 
     train_set, test_set = create_sets(documents, features)
     classifier = nltk.NaiveBayesClassifier.train(train_set)
 
     x = evaluate(classifier, test_set)
-    classifier.show_most_informative_features(n=20)
+    #classifier.show_most_informative_features(n=20)
     return x
 
 #==============================================================================
 #  Features generators
 #==============================================================================
 
-def freq_features(documents, features):
+def freq_features(features):
     '''Keeps only 1000 the most frequent features'''
     return nltk.FreqDist(features).keys()[:1000]
 
@@ -165,25 +257,20 @@ def df_features(documents, features):
     # take only X words which has df < N
     return [x[0] for x in dropwhile(lambda x: x[1] > int(N * 1), dfs)][:X]
 
+
 #==============================================================================
 #  Helper functions for features cleaning
 #==============================================================================
 
-def punctuation_remove(documents, features):
-    processed = []
-    for word in features:
-        processed.append(
-        ''.join([c for c in word.lower() if re.match("[a-z\-\' \n\t]", c)]))
-    return processed
+def punctuation_remove(feature):      
+    return ''.join([c for c in feature.lower() if re.match("[a-z\-\' \n\t]", c)]) 
 
-STOP_WORDS = stopwords.words('english')
-def stopwords_remove(documents, features):
-    processed = []
-    for word in features:
-        if word.lower() in STOP_WORDS:
-            continue
-        processed.append(word)
-    return processed
+STOP_WORDS = set(stopwords.words('english'))
+def stopwords_remove(feature):
+    if feature.lower() in STOP_WORDS:
+        return None    
+    else:
+        return feature
 
 #==============================================================================
 #  Program main block
@@ -205,24 +292,25 @@ l_stemmer = nltk.LancasterStemmer()
 
 # Define analysis mix
 results = []
+
 analysis_functions = [
-    #(document&features preprocessing functions, features cleaning functions)
-    ((str.lower, ),      (df_features, )),
-    ((),                 (df_features, )),
-    ((wnl.lemmatize, ),  (df_features, )),
-    ((p_stemmer.stem, ), (df_features, )),
-    ((),                 (punctuation_remove, df_features)),
-    ((),                 (punctuation_remove, df_features)),
-    ((wnl.lemmatize, ),  (stopwords_remove,   df_features)),
-    ((p_stemmer.stem, ), (stopwords_remove,   df_features)),
-    ((),                 (stopwords_remove,   df_features)),
+    ((),                                    (freq_features,)),
+    ((str.lower, ),                         (freq_features,)),
+    ((p_stemmer.stem, ),                    (freq_features,)),
+    ((l_stemmer.stem, ),                    (freq_features,)),
+    ((wnl.lemmatize, ),                     (freq_features,)),        
+    ((punctuation_remove,),                 (freq_features,)),
+    ((stopwords_remove,),                   (freq_features,)),
+    ((stopwords_remove, wnl.lemmatize, ),   (freq_features,)),
+    ((stopwords_remove, p_stemmer.stem, ),  (freq_features,)), 
 ]
+
 
 #==============================================================================
 #  Run `SAMPLES` times every analyse mix from `analysis_functions` and save
 #  the result (tuple of accuracy, precision, recall, f-measure) to `results`
 #==============================================================================
-SAMPLES = 3
+SAMPLES = 1
 for i in range(SAMPLES):
     random.shuffle(documents)
     results.append([])
@@ -238,7 +326,8 @@ for i in range(SAMPLES):
     print("")
 print("")
 
-# Count mean and print the results
+
+
 for col in range(len(analysis_functions)):
     sums = [0, 0, 0, 0]
     for row in range(SAMPLES):
