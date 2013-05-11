@@ -1,9 +1,8 @@
 # coding: utf-8
 """
-The application was optimized to run using PyPy 2.0 so we strongly recommend
-to run on PyPy. The time difference is between 10 - 12 times (that counts).
+The application was optimized to run using PyPy 2.0
 
-Laboratory 5 
+Laboratory 5 - Statistical Models for Textual Data
 @author: seby912 & tompe625
 """
 from __future__ import division, print_function
@@ -39,7 +38,7 @@ STOP_WORDS = set(stopwords.words('english'))
 #==============================================================================
 
 def df_feats(documents, features):
-     '''Removes unusable features based on DF value'''
+     '''Removes features based on DF value'''
      features_set = set(features)
      N = len(documents) // 2
      X = 600
@@ -432,7 +431,7 @@ stepC_d = ["Rm Stop w. + P. Stem. + Has(feat)",
            "Rm Stop w. + P. Stem. + Has(feat) + Count(trigr)",
            "Rm Stop w. + P. Stem. + Has(feat) + Count(b-coll)",         
            "Rm Stop w. + P. Stem. + Has(feat) + Count(t-coll)",
-           "Rm Stop w. + P. Stem. + Has(feat) + Avarage W. Lenght",
+           "Rm Stop w. + P. Stem. + Has(feat) + Avarage W. Length",
            "Rm Stop w. + P. Stem. + Has(feat) + Lexical Diversity",                    
            ]    
 
