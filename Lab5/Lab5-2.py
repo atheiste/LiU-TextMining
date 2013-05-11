@@ -376,9 +376,10 @@ stepA = [(str.lower, ),
          (freq_filter,),     
          ("has_feature",)]
 
-stepA_d = ["Lower + Freq. Filter + has(feat)"]
+stepA_d = ["Lower + Freq. Filter + Has(feat)"]
 
 stepB = [(rm_stops,p_stem.stem, ),
+         (rm_stops,rm_punct,p_stem.stem, ),
          (str.lower, ),     
          (p_stem.stem, ),   
          (l_stem.stem, ),   
@@ -391,6 +392,7 @@ stepB = [(rm_stops,p_stem.stem, ),
         ]
 
 stepB_d = ["Rm Stop words + Port Stemmer + Freq. Filter + Has(feat)",
+           "Rm Stop words + Rm Puncts + Port Stemmer + Freq. Filter + Has(feat)",
            "Lower + Freq. Filter + Has(feat)",
            "Port Stemmer + Freq. Filter + Has(feat)",
            "Lancaster Stemmer + Freq. Filter + Has(feat)",
@@ -428,7 +430,21 @@ stepC_d = ["Rm Stop w. + P. Stem. + Has(feat)",
            "Rm Stop w. + P. Stem. + Has(feat) + Count(t-coll)",
            "Rm Stop w. + P. Stem. + Has(feat) + Avarage W. Lenght",
            "Rm Stop w. + P. Stem. + Has(feat) + Lexical Diversity",                    
-           ]            
+           ]    
+
+stepC1_d = ["Rm Stop w. + Rm Puncts + P. Stem. + Has(feat)",
+           "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Has(bigr)",
+           "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Has(trigr)",
+           "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Has(b-coll)",
+           "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Has(t-coll)",
+           "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Count(feat)",
+           "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Count(bigr)",
+           "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Count(trigr)",
+           "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Count(b-coll)",         
+           "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Count(t-coll)",
+           "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Avarage W. Lenght",
+           "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Lexical Diversity",                    
+           ]       
 
 stepD = [ ("has_feature","tf-idf",),
           ("has_feature",),
@@ -457,6 +473,7 @@ for arg in sys.argv[2:]:
             pp = pre_process(documents, stepA[0], feature_candidates, stepA[1],True)
             results.append(get_results(pp, stepA[2]))
         show_results([results],stepA_d)
+
     
     if arg == "B":
         results = []
@@ -468,17 +485,28 @@ for arg in sys.argv[2:]:
                 pp = pre_process(documents, stepB[l], feature_candidates, stepA[1],True)
                 results[l].append(get_results(pp, stepA[2]))
         show_results(results,stepB_d)
+
     
     if arg == "C":
-        results = []        
+        results = []
+        results1 = []
+                    
         for i in range(SAMPLES):
-            random.shuffle(documents)
             pp = pre_process(documents, stepB[0], feature_candidates, stepA[1],False)
             for l in range(len(stepC)):
                 if l == len(results): 
                     results.append([])
-                results[l].append(get_results(pp, stepC[l]))
-        show_results(results,stepC_d)
+                results[l].append(get_results(pp, stepC[l])) 
+                
+            pp = pre_process(documents, stepB[1], feature_candidates, stepA[1],False)
+            for l in range(len(stepC)):
+                if l == len(results1): 
+                    results1.append([])
+                results1[l].append(get_results(pp, stepC[l])) 
+
+        show_results(results,stepC_d)             
+        show_results(results1,stepC1_d)        
+    
     
     if arg == "D":
         results = []
@@ -490,10 +518,8 @@ for arg in sys.argv[2:]:
                     results.append([])
                 results[l].append(get_results(pp, stepD[l]))
         show_results(results,stepD_d)
- 
-
-    
-    
+     
+        
 
     
 
