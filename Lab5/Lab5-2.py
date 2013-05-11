@@ -386,7 +386,7 @@ stepB = [(rm_stops,p_stem.stem, ),
          (rm_stops,rm_punct,p_stem.stem, ),
          (str.lower, ),     
          (p_stem.stem, ),   
-         #(l_stem.stem, ),   
+         (l_stem.stem, ),# can cause Segmentation Fault:11 with pypy on MacOS X 
          (wnl.lemmatize, ),         
          (rm_punct,),       
          (rm_stops,),      
@@ -399,7 +399,7 @@ stepB_d = ["Rm Stop words + Port Stemmer + Freq. Filter + Has(feat)",
            "Rm Stop words + Rm Puncts + Port Stemmer + Freq. Filter + Has(feat)",
            "Lower + Freq. Filter + Has(feat)",
            "Port Stemmer + Freq. Filter + Has(feat)",
-           #"Lancaster Stemmer + Freq. Filter + Has(feat)",
+           "Lancaster Stemmer + Freq. Filter + Has(feat)", 
            "Lemmatizer + Freq. Filter + Has(feat)",
            "Rm Puncts + Freq. Filter + Has(feat)",
            "Rm Stops + Freq. Filter + Has(feat)",
@@ -461,6 +461,12 @@ stepD_d = ["Rm Stop w. + P. Stem. + Has(feat) + Tf-Idf(feat)",
            "Rm Stop w. + P. Stem. + Has(feat) + Has(b-coll)",
            "Rm Stop w. + P. Stem. + Has(feat) + Has(t-coll)",
           ]            
+        
+stepD1_d = ["Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Tf-Idf(feat)",
+           "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat)",
+           "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Has(b-coll)",
+           "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Has(t-coll)",
+          ]            
 
 #==============================================================================
 #  Run `SAMPLES` times every analyse mix from `analysis_functions` and save
@@ -515,14 +521,24 @@ for arg in sys.argv[2:]:
     
     if arg == "D":
         results = []
+        results1 = []
+        
         for i in range(SAMPLES):
             random.shuffle(documents)
             pp = pre_process(documents, stepB[0],feature_candidates, stepA[1],False)
             for l in range(len(stepD)):
                 if l == len(results): 
                     results.append([])
-                results[l].append(get_results(pp, stepD[l]))
+                results[l].append(get_results(pp, stepD[l]))            
+            
+            pp = pre_process(documents, stepB[1],feature_candidates, stepA[1],False)
+            for l in range(len(stepD)):
+                if l == len(results1): 
+                    results1.append([])
+                results1[l].append(get_results(pp, stepD[l]))
+                
         show_results(results,stepD_d)
+        show_results(results1,stepD1_d)
      
         
 
