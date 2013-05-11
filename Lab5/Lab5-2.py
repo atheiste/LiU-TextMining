@@ -430,10 +430,16 @@ stepC_d = ["Rm Stop w. + P. Stem. + Has(feat)",
            "Rm Stop w. + P. Stem. + Has(feat) + Lexical Diversity",                    
            ]            
 
-stepD = [ ("has_feature","tf-idf",)
+stepD = [ ("has_feature","tf-idf",),
+          ("has_feature",),
+          ("has_feature","has_bcoll",),
+          ("has_feature","has_tcoll",),
         ]
         
 stepD_d = ["Rm Stop w. + P. Stem. + Has(feat) + Tf-Idf(feat)",
+           "Rm Stop w. + P. Stem. + Has(feat)",
+           "Rm Stop w. + P. Stem. + Has(feat) + Has(b-coll)",
+           "Rm Stop w. + P. Stem. + Has(feat) + Has(t-coll)",
           ]            
 
 #==============================================================================
@@ -483,7 +489,7 @@ for arg in sys.argv[2:]:
                 if l == len(results): 
                     results.append([])
                 results[l].append(get_results(pp, stepD[l]))
-        show_results(results,stedD_d)
+        show_results(results,stepD_d)
  
 
     
