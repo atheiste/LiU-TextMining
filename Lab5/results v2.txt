@@ -1,56 +1,71 @@
 a)
 
 ----------------------------------------------------------------------------------------------------------
-| Acc.   | Prec.  | Rec.   | F-Meas.| Setup                                                              |
+| F-Meas.| Acc.   | Prec.  | Rec.   | Setup                                                              |
 ----------------------------------------------------------------------------------------------------------
-|  0.776 |  0.795 |  0.742 |  0.767 | Lower + Freq. Filter + has(feat)                                   |
+|  0.769 |  0.781 |  0.792 |  0.748 | Lower + Freq. Filter + Has(feat)                                   |
 ----------------------------------------------------------------------------------------------------------
 
 b)
 
 ----------------------------------------------------------------------------------------------------------
-| Acc.   | Prec.  | Rec.   | F-Meas.| Setup                                                              |
+| F-Meas.| Acc.   | Prec.  | Rec.   | Setup                                                              |
 ----------------------------------------------------------------------------------------------------------
-|  0.770 |  0.800 |  0.722 |  0.758 | Rm Stop words + Port Stemmer + Freq. Filter + Has(feat)            |
-|  0.739 |  0.746 |  0.727 |  0.736 | Lower + Freq. Filter + Has(feat)                                   |
-|  0.768 |  0.791 |  0.732 |  0.760 | Port Stemmer + Freq. Filter + Has(feat)                            |
-|  0.755 |  0.782 |  0.709 |  0.743 | Lancaster Stemmer + Freq. Filter + Has(feat)                       |
-|  0.732 |  0.743 |  0.711 |  0.726 | Lemmatizer + Freq. Filter + Has(feat)                              |
-|  0.732 |  0.740 |  0.717 |  0.728 | Rm Puncts + Freq. Filter + Has(feat)                               |
-|  0.735 |  0.742 |  0.722 |  0.732 | Rm Stops + Freq. Filter + Has(feat)                                |
-|  0.739 |  0.756 |  0.707 |  0.730 | Rm Stops + Lemmatizer + Freq. Filter + Has(feat)                   |
-|  0.767 |  0.790 |  0.731 |  0.759 | Rm Puncts + Port Stemmer + Freq. Filter + Has(feat)                |
-|  0.734 |  0.747 |  0.709 |  0.727 | Rm Puncts + Lemmatizer + Freq. Filter + Has(feat)                  |
+|  0.752 |  0.767 |  0.809 |  0.703 | Rm Stop words + Rm Puncts + Port Stemmer + Freq. Filter + Has(feat)|
+|  0.750 |  0.765 |  0.808 |  0.700 | Rm Stop words + Port Stemmer + Freq. Filter + Has(feat)            |
+|  0.749 |  0.764 |  0.807 |  0.700 | Port Stemmer + Freq. Filter + Has(feat)                            |
+|  0.746 |  0.762 |  0.808 |  0.694 | Rm Puncts + Port Stemmer + Freq. Filter + Has(feat)                |
+|  0.736 |  0.745 |  0.769 |  0.707 | Rm Puncts + Freq. Filter + Has(feat)                               |
+|  0.735 |  0.746 |  0.775 |  0.700 | Rm Stops + Freq. Filter + Has(feat)                                |
+|  0.732 |  0.741 |  0.765 |  0.703 | Lower + Freq. Filter + Has(feat)                                   |
+|  0.728 |  0.742 |  0.777 |  0.685 | Rm Stops + Lemmatizer + Freq. Filter + Has(feat)                   |
+|  0.728 |  0.739 |  0.769 |  0.691 | Lemmatizer + Freq. Filter + Has(feat)                              |
+|  0.725 |  0.737 |  0.767 |  0.688 | Rm Puncts + Lemmatizer + Freq. Filter + Has(feat)                  |
 ----------------------------------------------------------------------------------------------------------
 
 c)
 
 ----------------------------------------------------------------------------------------------------------
-| Acc.   | Prec.  | Rec.   | F-Meas.| Setup                                                              |
+| F-Meas.| Acc.   | Prec.  | Rec.   | Setup                                                              |
 ----------------------------------------------------------------------------------------------------------
-|  0.775 |  0.803 |  0.731 |  0.765 | Rm Stop w. + P. Stem. + Has(feat)                                  |
-|  0.774 |  0.801 |  0.730 |  0.763 | Rm Stop w. + P. Stem. + Has(feat) + Has(bigr)                      |
-|  0.775 |  0.803 |  0.730 |  0.764 | Rm Stop w. + P. Stem. + Has(feat) + Has(trigr)                     |
-|  0.781 |  0.811 |  0.735 |  0.771 | Rm Stop w. + P. Stem. + Has(feat) + Has(b-coll)                    |
-|  0.785 |  0.813 |  0.741 |  0.774 | Rm Stop w. + P. Stem. + Has(feat) + Has(t-coll)                    |
-|  0.758 |  0.808 |  0.678 |  0.737 | Rm Stop w. + P. Stem. + Has(feat) + Count(feat)                    |
-|  0.775 |  0.799 |  0.738 |  0.767 | Rm Stop w. + P. Stem. + Has(feat) + Count(bigr)                    |
-|  0.778 |  0.806 |  0.734 |  0.767 | Rm Stop w. + P. Stem. + Has(feat) + Count(trigr)                   |
-|  0.775 |  0.799 |  0.738 |  0.767 | Rm Stop w. + P. Stem. + Has(feat) + Count(b-coll)                  |
-|  0.778 |  0.806 |  0.734 |  0.767 | Rm Stop w. + P. Stem. + Has(feat) + Count(t-coll)                  |
-|  0.775 |  0.803 |  0.731 |  0.765 | Rm Stop w. + P. Stem. + Has(feat) + Avarage W. Lenght              |
-|  0.775 |  0.803 |  0.731 |  0.765 | Rm Stop w. + P. Stem. + Has(feat) + Lexical Diversity              |
+|  0.758 |  0.771 |  0.803 |  0.719 | Rm Stop w. + P. Stem. + Has(feat) + Has(t-coll)                    |
+|  0.755 |  0.768 |  0.798 |  0.719 | Rm Stop w. + P. Stem. + Has(feat) + Has(b-coll)                    |
+|  0.754 |  0.767 |  0.797 |  0.717 | Rm Stop w. + P. Stem. + Has(feat) + Has(trigr)                     |
+|  0.754 |  0.767 |  0.796 |  0.716 | Rm Stop w. + P. Stem. + Has(feat) + Has(bigr)                      |
+|  0.753 |  0.767 |  0.797 |  0.715 | Rm Stop w. + P. Stem. + Has(feat) + Lexical Diversity              |
+|  0.753 |  0.767 |  0.797 |  0.715 | Rm Stop w. + P. Stem. + Has(feat) + Avarage W. Lenght              |
+|  0.753 |  0.767 |  0.797 |  0.715 | Rm Stop w. + P. Stem. + Has(feat)                                  |
+|  0.752 |  0.766 |  0.798 |  0.713 | Rm Stop w. + P. Stem. + Has(feat) + Count(bigr)                    |
+|  0.752 |  0.766 |  0.798 |  0.713 | Rm Stop w. + P. Stem. + Has(feat) + Count(b-coll)                  |
+|  0.752 |  0.766 |  0.796 |  0.715 | Rm Stop w. + P. Stem. + Has(feat) + Count(trigr)                   |
+|  0.752 |  0.766 |  0.796 |  0.715 | Rm Stop w. + P. Stem. + Has(feat) + Count(t-coll)                  |
+|  0.750 |  0.770 |  0.821 |  0.691 | Rm Stop w. + P. Stem. + Has(feat) + Count(feat)                    |
 ----------------------------------------------------------------------------------------------------------
-
+----------------------------------------------------------------------------------------------------------
+| F-Meas.| Acc.   | Prec.  | Rec.   | Setup                                                              |
+----------------------------------------------------------------------------------------------------------
+|  0.759 |  0.772 |  0.805 |  0.718 | Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Has(t-coll)       |
+|  0.759 |  0.772 |  0.803 |  0.721 | Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Has(b-coll)       |
+|  0.758 |  0.770 |  0.801 |  0.720 | Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Has(bigr)         |
+|  0.758 |  0.770 |  0.799 |  0.721 | Rm Stop w. + Rm Puncts + P. Stem. + Has(feat)                      |
+|  0.758 |  0.770 |  0.799 |  0.721 | Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Lexical Diversity |
+|  0.758 |  0.770 |  0.799 |  0.721 | Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Avarage W. Lenght |
+|  0.757 |  0.770 |  0.799 |  0.720 | Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Has(trigr)        |
+|  0.756 |  0.769 |  0.800 |  0.718 | Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Count(bigr)       |
+|  0.756 |  0.769 |  0.800 |  0.718 | Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Count(b-coll)     |
+|  0.756 |  0.769 |  0.799 |  0.719 | Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Count(trigr)      |
+|  0.756 |  0.769 |  0.799 |  0.719 | Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Count(t-coll)     |
+|  0.746 |  0.767 |  0.818 |  0.686 | Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Count(feat)       |
+----------------------------------------------------------------------------------------------------------
 
 d)
 
 ----------------------------------------------------------------------------------------------------------
-| Acc.   | Prec.  | Rec.   | F-Meas.| Setup                                                              |
+| F-Meas.| Acc.   | Prec.  | Rec.   | Setup                                                              |
 ----------------------------------------------------------------------------------------------------------
-|  0.779 |  0.819 |  0.719 |  0.765 | Rm Stop w. + P. Stem. + Has(feat) + Tf-Idf(feat)                   |
-|  0.780 |  0.813 |  0.728 |  0.768 | Rm Stop w. + P. Stem. + Has(feat)                                  |
-|  0.784 |  0.819 |  0.732 |  0.772 | Rm Stop w. + P. Stem. + Has(feat) + Has(b-coll)                    |
-|  0.783 |  0.819 |  0.728 |  0.771 | Rm Stop w. + P. Stem. + Has(feat) + Has(t-coll)                    |
+|  0.778 |  0.785 |  0.822 |  0.740 | Rm Stop w. + P. Stem. + Has(feat) + Has(t-coll)                    |
+|  0.777 |  0.782 |  0.815 |  0.743 | Rm Stop w. + P. Stem. + Has(feat) + Has(b-coll)                    |
+|  0.772 |  0.778 |  0.809 |  0.739 | Rm Stop w. + P. Stem. + Has(feat)                                  |
+|  0.768 |  0.775 |  0.813 |  0.728 | Rm Stop w. + P. Stem. + Has(feat) + Tf-Idf(feat)                   |
 ----------------------------------------------------------------------------------------------------------
 

@@ -232,7 +232,7 @@ def pre_process(documents, document_preprocess, features_words,
         trigr = trigrams(features_words)
         bcoll = create_bi_collocations(features_words,document_preprocess)    
         tcoll = create_tri_collocations(features_words,document_preprocess)
-        idf = get_idfs(documents, features_words)    
+        idf = get_idfs(documents, features_words)  
     return [documents,features_words,bigr,trigr,bcoll,tcoll,idf]
 
 #==============================================================================
@@ -322,9 +322,9 @@ def evaluate(classifier, test_set):
     precision = tp/(tp+fp)
     recall = tp/(tp+fn)
     f = f_measure(precision, recall, 0.5)
-    print ("Accuracy: {:.2f} - Precision: {:.2f} - Recall: {:.2f} - "
-    "F-measure: {:.2f}".format(accuracy,precision,recall,f))
-    return [accuracy,precision,recall,f]
+    print ("F-measure: {:.2f} - Accuracy: {:.2f} - Precision: {:.2f} - "
+    "Recall: {:.2f}".format(f,accuracy,precision,recall))
+    return [f,accuracy,precision,recall]
 
 
 #==============================================================================
@@ -346,15 +346,19 @@ def rm_stops(feature):
 #==============================================================================
 
 def show_results(results,descr):
+    table = []
     print ("-"*106)
-    print ("| {:}| {:}| {:}| {:}| {:<67}|".format("Acc.   ","Prec.  ","Rec.   ","F-Meas.","Setup  "))
+    print ("| {:}| {:}| {:}| {:}| {:<67}|".format("F-Meas.","Acc.   ","Prec.  ","Rec.   ","Setup  "))
     print ("-"*106)
         
     for i in range(len(results)):
         sums = sum(results[i])/len(results[i])
-        print ("|  {0:1.3f} |  {1:1.3f} |  {2:1.3f} |  {3:1.3f} | {4:<67}|".format(
+        table.append("|  {0:1.3f} |  {1:1.3f} |  {2:1.3f} |  {3:1.3f} | {4:<67}|".format(
             sums[0],sums[1],sums[2],sums[3],descr[i])
         )
+        
+    for i in sorted(table,reverse=True):
+        print(i)
     print ("-"*106)
 
 
@@ -382,7 +386,7 @@ stepB = [(rm_stops,p_stem.stem, ),
          (rm_stops,rm_punct,p_stem.stem, ),
          (str.lower, ),     
          (p_stem.stem, ),   
-         (l_stem.stem, ),   
+         #(l_stem.stem, ),   
          (wnl.lemmatize, ),         
          (rm_punct,),       
          (rm_stops,),      
@@ -395,7 +399,7 @@ stepB_d = ["Rm Stop words + Port Stemmer + Freq. Filter + Has(feat)",
            "Rm Stop words + Rm Puncts + Port Stemmer + Freq. Filter + Has(feat)",
            "Lower + Freq. Filter + Has(feat)",
            "Port Stemmer + Freq. Filter + Has(feat)",
-           "Lancaster Stemmer + Freq. Filter + Has(feat)",
+           #"Lancaster Stemmer + Freq. Filter + Has(feat)",
            "Lemmatizer + Freq. Filter + Has(feat)",
            "Rm Puncts + Freq. Filter + Has(feat)",
            "Rm Stops + Freq. Filter + Has(feat)",
@@ -492,6 +496,7 @@ for arg in sys.argv[2:]:
         results1 = []
                     
         for i in range(SAMPLES):
+            random.shuffle(documents)
             pp = pre_process(documents, stepB[0], feature_candidates, stepA[1],False)
             for l in range(len(stepC)):
                 if l == len(results): 
