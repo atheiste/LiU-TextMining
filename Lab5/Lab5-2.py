@@ -12,6 +12,7 @@ import math
 import nltk
 import re
 import random
+import sys
 
 from collections import Counter
 from itertools import dropwhile
@@ -95,7 +96,7 @@ def count_trigrams_feats(document, trigr):
         
     return features
 
-def count_bigrams_feats(document, bigr,i):
+def count_bigrams_feats(document, bigr):
     '''Produces count features "count('word1','word2')<>n: <true|false>" '''
     features = {}
     for b in bigr:
@@ -344,17 +345,18 @@ def rm_stops(feature):
 #  Show results in a table
 #==============================================================================
 
-def show_results(results):
+def show_results(results,descr):
     print ("-"*106)
-    print ("| {:<10}\t| {:<10}\t| {:<10}\t| {:<10}\t| {:<55}|".format("Acc.","Prec.","Rec.","F-Meas.","Setup"))
+    print ("| {:}| {:}| {:}| {:}| {:<67}|".format("Acc.   ","Prec.  ","Rec.   ","F-Meas.","Setup  "))
     print ("-"*106)
         
-    for r in results:
-        sums = sum(r)/len(r)
-        print ("| {0:1.2f}\t| {1:1.2f}\t| {2:1.2f}\t| {3:1.2f}\t| {4:<55}|".format(
-            sums[0],sums[1],sums[2],sums[3],"none")
+    for i in range(len(results)):
+        sums = sum(results[i])/len(results[i])
+        print ("|  {0:1.3f} |  {1:1.3f} |  {2:1.3f} |  {3:1.3f} | {4:<67}|".format(
+            sums[0],sums[1],sums[2],sums[3],descr[i])
         )
     print ("-"*106)
+
 
 #==============================================================================
 #  Program main block
@@ -374,6 +376,7 @@ stepA = [(str.lower, ),
          (freq_filter,),     
          ("has_feature",)]
 
+stepA_d = ["Lower + Freq. Filter + has(feat)"]
 
 stepB = [(rm_stops,p_stem.stem, ),
          (str.lower, ),     
@@ -386,6 +389,18 @@ stepB = [(rm_stops,p_stem.stem, ),
          (rm_punct,p_stem.stem, ),    
          (rm_punct,wnl.lemmatize, ),  
         ]
+
+stepB_d = ["Rm Stop words + Port Stemmer + Freq. Filter + Has(feat)",
+           "Lower + Freq. Filter + Has(feat)",
+           "Port Stemmer + Freq. Filter + Has(feat)",
+           "Lancaster Stemmer + Freq. Filter + Has(feat)",
+           "Lemmatizer + Freq. Filter + Has(feat)",
+           "Rm Puncts + Freq. Filter + Has(feat)",
+           "Rm Stops + Freq. Filter + Has(feat)",
+           "Rm Stops + Lemmatizer + Freq. Filter + Has(feat)",
+           "Rm Puncts + Port Stemmer + Freq. Filter + Has(feat)",           
+           "Rm Puncts + Lemmatizer + Freq. Filter + Has(feat)",                     
+           ]
 
 stepC = [ ("has_feature",),
           ("has_feature","has_bigram",),
@@ -400,49 +415,75 @@ stepC = [ ("has_feature",),
           ("has_feature","avg_l_w",),
           ("has_feature","lex_d",),
         ]
+ 
+stepC_d = ["Rm Stop w. + P. Stem. + Has(feat)",
+           "Rm Stop w. + P. Stem. + Has(feat) + Has(bigr)",
+           "Rm Stop w. + P. Stem. + Has(feat) + Has(trigr)",
+           "Rm Stop w. + P. Stem. + Has(feat) + Has(b-coll)",
+           "Rm Stop w. + P. Stem. + Has(feat) + Has(t-coll)",
+           "Rm Stop w. + P. Stem. + Has(feat) + Count(feat)",
+           "Rm Stop w. + P. Stem. + Has(feat) + Count(bigr)",
+           "Rm Stop w. + P. Stem. + Has(feat) + Count(trigr)",
+           "Rm Stop w. + P. Stem. + Has(feat) + Count(b-coll)",         
+           "Rm Stop w. + P. Stem. + Has(feat) + Count(t-coll)",
+           "Rm Stop w. + P. Stem. + Has(feat) + Avarage W. Lenght",
+           "Rm Stop w. + P. Stem. + Has(feat) + Lexical Diversity",                    
+           ]            
 
 stepD = [ ("has_feature","tf-idf",)
         ]
+        
+stepD_d = ["Rm Stop w. + P. Stem. + Has(feat) + Tf-Idf(feat)",
+          ]            
 
 #==============================================================================
 #  Run `SAMPLES` times every analyse mix from `analysis_functions` and save
 #  the result (tuple of accuracy, precision, recall, f-measure) to `results`
 #==============================================================================
-SAMPLES = 1
+SAMPLES = int(sys.argv[1])
 
-results = []
-for i in range(SAMPLES):
-    random.shuffle(documents)
-    pp = pre_process(documents, stepA[0], feature_candidates, stepA[1],False)
-    results.append(get_results(pp, stepA[2]))
-show_results([results])
-
-results = []
-for i in range(SAMPLES):
-    random.shuffle(documents)
-    for l in range(len(stepB)):
-        results.append([])
-        pp = pre_process(documents, stepB[l], feature_candidates, stepA[1],False)
-        results[l].append(get_results(pp, stepA[2]))
-show_results(results)
-
-results = []        
-for i in range(SAMPLES):
-    random.shuffle(documents)
-    pp = pre_process(documents, stepB[0], feature_candidates, stepA[1],True)
-    for l in range(len(stepC)):
-        results.append([])
-        results[l].append(get_results(pp, stepC[l]))
-show_results(results)
-
-results = []
-for i in range(SAMPLES):
-    random.shuffle(documents)
-    pp = pre_process(documents, stepB[0],feature_candidates, stepA[1],True)
-    for l in range(len(stepC)):
-        results.append([])
-        results[l].append(get_results(pp, stepD[l]))
-show_results(results)
+for arg in sys.argv[2:]:
+    
+    if arg == "A":
+        results = []
+        for i in range(SAMPLES):
+            random.shuffle(documents)
+            pp = pre_process(documents, stepA[0], feature_candidates, stepA[1],True)
+            results.append(get_results(pp, stepA[2]))
+        show_results([results],stepA_d)
+    
+    if arg == "B":
+        results = []
+        for i in range(SAMPLES):
+            random.shuffle(documents)
+            for l in range(len(stepB)):
+                if l == len(results): 
+                    results.append([])
+                pp = pre_process(documents, stepB[l], feature_candidates, stepA[1],True)
+                results[l].append(get_results(pp, stepA[2]))
+        show_results(results,stepB_d)
+    
+    if arg == "C":
+        results = []        
+        for i in range(SAMPLES):
+            random.shuffle(documents)
+            pp = pre_process(documents, stepB[0], feature_candidates, stepA[1],False)
+            for l in range(len(stepC)):
+                if l == len(results): 
+                    results.append([])
+                results[l].append(get_results(pp, stepC[l]))
+        show_results(results,stepC_d)
+    
+    if arg == "D":
+        results = []
+        for i in range(SAMPLES):
+            random.shuffle(documents)
+            pp = pre_process(documents, stepB[0],feature_candidates, stepA[1],False)
+            for l in range(len(stepD)):
+                if l == len(results): 
+                    results.append([])
+                results[l].append(get_results(pp, stepD[l]))
+        show_results(results,stedD_d)
  
 
     
