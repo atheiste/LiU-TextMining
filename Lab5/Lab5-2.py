@@ -21,6 +21,7 @@ from nltk.collocations import BigramCollocationFinder
 from nltk.collocations import TrigramCollocationFinder
 from nltk.corpus import movie_reviews
 from nltk.corpus import stopwords
+from numpy import array
 
 wnl = nltk.WordNetLemmatizer()
 p_stem = nltk.PorterStemmer()
@@ -36,7 +37,7 @@ STOP_WORDS = set(stopwords.words('english'))
 #                           returning a dictionary
 #==============================================================================
 
-def df_features(documents, features):
+def df_feats(documents, features):
      '''Removes unusable features based on DF value'''
      features_set = set(features)
      N = len(documents) // 2
@@ -47,41 +48,67 @@ def df_features(documents, features):
      # take only X words which has df < N
      return [x[0] for x in dropwhile(lambda x: x[1] > int(N * 1), dfs)][:X]
 
-def tf_idf_features(document, idfs):
-    '''Produces value features "tf-idf('word1'): <value>" '''
+def avg_w_l_feats(document):
+    '''Produces value features "avg<>n: <true|false>" '''
+    features = {}
+    avg = sum([len(w) for w in document])/len(document)
+    features['avg<2'] = (avg<2)  
+    features['2<=avg<=4'] = (avg>=2 and avg<=4)
+    features['avg>4'] = (avg>4)  
+    return features
+
+def lex_d_feats(document):
+    '''Produces value features "lex<>n: <true|false>" '''
+    features = {}
+    lex = len(set(document))/len(document)
+    features['lex<2'] = (lex<2)  
+    features['2<=lex<=4'] = (lex>=2 and lex<=4)
+    features['lex>4'] = (lex>4)  
+    features = {}
+    return features
+
+def tf_idf_feats(document, idfs):
+    '''Produces value features "tf-idf('word1')<>n: <true|false>" '''
     features = {}
     counter = Counter(document)
     for i in idfs:
         tf = counter[i[0]]
         if tf > 0:
             tf = (1+math.log(tf,10))
-        features['tf-idf(%s)' % (i[0])] = tf*i[1]
+        summ = tf*i[1]
+        features['tf-idf(%s)<0.5' % (i[0])] = (summ<0.5)
+        features['0.5<=tf-idf(%s)<=1.5' % (i[0])] = (summ>=0.5 and summ<=1.5)  
+        features['tf-idf(%s)>1.5' % (i[0])] = (summ>1.5)
     return features
 
-
-def count_trigrams_features(document, trigr):
-    '''Produces count features "count('word1','word2','word3'): <number>" '''
+def count_trigrams_feats(document, trigr):
+    '''Produces count features "count('word1','word2','word3')<>n: <true|false>" '''
     features = {}
     for t in trigr:
         summ = 0
         for i in range(2,len(document)):
             if((document[i-2],document[i-1],document[i]) == t):
                 summ+=1
-        features['count(%s,%s,%s)' % (document[i-2],document[i-1],document[i])] = summ
+        features['count(%s,%s,%s)<2' % (document[i-2],document[i-1],document[i])] = (summ<2)
+        features['2<=count(%s,%s,%s)<=4' % (document[i-2],document[i-1],document[i])] = (summ>=2 and summ<=4)
+        features['count(%s,%s,%s)>4' % (document[i-2],document[i-1],document[i])] = (summ>4)    
+        
     return features
 
-def count_bigrams_features(document, bigr):
-    '''Produces count features "count('word1','word2'): <number>" '''
+def count_bigrams_feats(document, bigr,i):
+    '''Produces count features "count('word1','word2')<>n: <true|false>" '''
     features = {}
     for b in bigr:
         summ = 0
         for i in range(1,len(document)):
             if((document[i-1],document[i]) == b):
-                summ+=1
-        features['count(%s,%s)' % (document[i-1],document[i])] = summ
+                summ+=1        
+        features['count(%s,%s)<2' % (document[i-1],document[i])] = (summ<2)
+        features['2<=count(%s,%s)<=4' % (document[i-1],document[i])] = (summ>=2 and summ<=4)
+        features['count(%s,%s)>4' % (document[i-1],document[i])] = (summ>4)    
     return features
 
-def has_trigrams_features(document, trigr):
+def has_trigrams_feats(document, trigr):
     '''Produces binary features "has('word1','word2','word3'): <true|false>" '''
     features = {}
     for t in trigr:
@@ -93,7 +120,7 @@ def has_trigrams_features(document, trigr):
         features['has(%s)' % str(t)] = found      
     return features
     
-def has_bigrams_features(document, bigr):
+def has_bigrams_feats(document, bigr):
     '''Produces binary features "has('word1','word2'): <true|false>" '''
     features = {}
     for b in bigr:
@@ -105,7 +132,7 @@ def has_bigrams_features(document, bigr):
         features['has(%s)' % str(b)] = found      
     return features
 
-def has_features(document, features_words):
+def has_feats(document, features_words):
     '''Produces binary features "has('word'): <true|false>" '''
     features = {}
     document = set(document)
@@ -113,12 +140,15 @@ def has_features(document, features_words):
         features['has({})'.format(word)] = (word in document)
     return features
 
-def count_features(document, features_words):
-    '''Produces count features "count('word'): <number>" '''
+def count_feats(document, features_words):
+    '''Produces count features "count('word')<>n: <true|false>" '''
     features = {}
     counter = Counter(document)
     for word in features_words:
-        features['count({})'.format(word)] = counter[word]
+        summ = counter[word]
+        features['count(%s)<2' % (word)] = (summ<2)  
+        features['2<=count(%s)<=4' % (word)] = (summ>=2 and summ<=4)
+        features['count(%s)>4' % (word)] = (summ>4)        
     return features
 
 #==============================================================================
@@ -174,48 +204,43 @@ def create_tri_collocations(features_words,document_preprocess):
         tricoll = [(f(a),f(b),f(c)) for (a,b,c) in tricoll if (f(a) and f(b) and f(c))]
     return tricoll
 
-#==============================================================================
-#  Analysis function
-#==============================================================================
-def analysis(documents, document_preprocess, features_words, 
-             features_preprocess, features_func):
-    '''
-    Entry point to analysis, creates feature sets, trains a classificator and
-    calls evaluation
-    '''
     
-# Preprocessing    
+#==============================================================================
+#  Preprocessing  
+#==============================================================================
+    
+def pre_process(documents, document_preprocess, features_words, 
+                features_preprocess, light):
     for f in document_preprocess:
         for i in range(len(documents)):
-            documents[i][0] = filter(None,map(f, documents[i][0]))  
-        features_words = filter(None,map(f,features_words))
+            documents[i][0] = [f(w) for w in documents[i][0] if f(w)]
+            
+        features_words = [f(w) for w in features_words if f(w)]
 
     for feat_func in features_preprocess:
         features_words = feat_func(features_words)
-    features_words = set(features_words)
-
-
-    featuresets = []
-    print( list(features_words)[:10] )
     
-# Features creation
-    bigr=[] 
-    trigr=[]
-    bcoll=[]    
-    tcoll=[]
-    idf=[]    
+    bigr = []    
+    trigr = []
+    bcoll = []    
+    tcoll = []
+    idf = []
     
-    if (("has_bigram" or "count_bigram") in features_func):
+    if not light:
         bigr = bigrams(features_words)
-    if (("has_trigram" or "count_trigram") in features_func):    
         trigr = trigrams(features_words)
-    if (("has_bcoll" or "count_bcoll") in features_func):    
         bcoll = create_bi_collocations(features_words,document_preprocess)    
-    if (("has_tcoll" or "count_tcoll") in features_func):    
         tcoll = create_tri_collocations(features_words,document_preprocess)
-    if (("tf-idef") in features_func):    
         idf = get_idfs(documents, features_words)    
+    return [documents,features_words,bigr,trigr,bcoll,tcoll,idf]
+
+#==============================================================================
+#  Feature Set
+#==============================================================================
     
+def get_results(preprocess_results,features_func):
+    documents,features_words,bigr,trigr,bcoll,tcoll,idf = preprocess_results    
+    featuresets = []    
     l = len(documents)
     for i in range(l):
         print(".",end="")
@@ -223,47 +248,50 @@ def analysis(documents, document_preprocess, features_words,
         
         for f in features_func:
             if f == "has_feature":
-                features.update(has_features(documents[i][0], features_words))
+                features.update(has_feats(documents[i][0], features_words))
             elif f == "has_bigram":
-                features.update(has_bigrams_features(documents[i][0], bigr))
+                features.update(has_bigrams_feats(documents[i][0], bigr))
             elif f == "has_trigram":
-                features.update(has_trigrams_features(documents[i][0], trigr))
+                features.update(has_trigrams_feats(documents[i][0], trigr))
 
             elif f == "has_bcoll":
-                features.update(has_bigrams_features(documents[i][0], bcoll))
+                features.update(has_bigrams_feats(documents[i][0], bcoll))
             elif f == "has_tcoll":
-                features.update(has_trigrams_features(documents[i][0], tcoll))
+                features.update(has_trigrams_feats(documents[i][0], tcoll))
             
             elif f == "count_feature":
-                features.update(count_features(documents[i][0], features_words))
+                features.update(count_feats(documents[i][0], features_words))
             elif f == "count_bigram":
-                features.update(count_bigrams_features(documents[i][0], bigr))
+                features.update(count_bigrams_feats(documents[i][0], bigr))
             elif f == "count_trigram":
-                features.update(count_trigrams_features(documents[i][0], trigr))
+                features.update(count_trigrams_feats(documents[i][0], trigr))
             
             elif f == "count_bcoll":
-                features.update(count_bigrams_features(documents[i][0], bcoll))
+                features.update(count_bigrams_feats(documents[i][0], bcoll))
             elif f == "count_tcoll":
-                features.update(count_trigrams_features(documents[i][0], tcoll))
+                features.update(count_trigrams_feats(documents[i][0], tcoll))
                 
             elif f == "tf-idf":
-                features.update(tf_idf_features(documents[i][0], idf))
+                features.update(tf_idf_feats(documents[i][0], idf))
+                
+            elif f == "lex_d":
+                features.update(lex_d_feats(documents[i][0]))
+                
+            elif f == "avg_w_l":
+                features.update(avg_w_l_feats(documents[i][0]))
 
                 
         featuresets.append((features, documents[i][1]))
         
     threshold = int(len(documents)*0.8)
     
-    train_set = featuresets[:threshold]
-    test_set = featuresets[threshold:]
-    print("")
 
-# Training    
+    # Training    
 
-    classifier = nltk.NaiveBayesClassifier.train(train_set)
-    x = evaluate(classifier, test_set)
+    classifier = nltk.NaiveBayesClassifier.train(featuresets[:threshold])
+    x = evaluate(classifier, featuresets[threshold:])
     classifier.show_most_informative_features(n=20)
-    return x
+    return array(x)
 
 #==============================================================================
 #  Evaluate a classifier in terms of Accuracy, Precision, Recall, F-Measure
@@ -275,21 +303,26 @@ def evaluate(classifier, test_set):
         try:
             return 1/(alpha*(1/precision)+(1-alpha)*1/recall)
         except ZeroDivisionError:
+            print("Division by 0")
             return 1
 
     test = classifier.batch_classify([fs for (fs,l) in test_set])
     gold = [l for (fs,l) in  test_set]
     matrix = nltk.ConfusionMatrix(gold, test)
+    print("")
+    
+    print(matrix)
     tp = (matrix['pos','pos'])
     fn = (matrix['pos','neg'])
     fp = (matrix['neg','pos'])
 
     accuracy = nltk.classify.accuracy(classifier, test_set)
 
-    precision = tp/(tp+fp or 1)
-    recall = tp/(tp+fn or 1)
+    precision = tp/(tp+fp)
+    recall = tp/(tp+fn)
     f = f_measure(precision, recall, 0.5)
-
+    print ("Accuracy: {:.2f} - Precision: {:.2f} - Recall: {:.2f} - "
+    "F-measure: {:.2f}".format(accuracy,precision,recall,f))
     return [accuracy,precision,recall,f]
 
 
@@ -308,6 +341,22 @@ def rm_stops(feature):
         return feature
 
 #==============================================================================
+#  Show results in a table
+#==============================================================================
+
+def show_results(results):
+    print ("-"*106)
+    print ("| {:<10}\t| {:<10}\t| {:<10}\t| {:<10}\t| {:<55}|".format("Acc.","Prec.","Rec.","F-Meas.","Setup"))
+    print ("-"*106)
+        
+    for r in results:
+        sums = sum(r)/len(r)
+        print ("| {0:1.2f}\t| {1:1.2f}\t| {2:1.2f}\t| {3:1.2f}\t| {4:<55}|".format(
+            sums[0],sums[1],sums[2],sums[3],"none")
+        )
+    print ("-"*106)
+
+#==============================================================================
 #  Program main block
 #==============================================================================
 
@@ -321,121 +370,84 @@ for category in movie_reviews.categories():
 # All words across all documents
 feature_candidates = movie_reviews.words()[:]
 
+stepA = [(str.lower, ),     
+         (freq_filter,),     
+         ("has_feature",)]
 
 
+stepB = [(rm_stops,p_stem.stem, ),
+         (str.lower, ),     
+         (p_stem.stem, ),   
+         (l_stem.stem, ),   
+         (wnl.lemmatize, ),         
+         (rm_punct,),       
+         (rm_stops,),      
+         (rm_stops,wnl.lemmatize, ),  
+         (rm_punct,p_stem.stem, ),    
+         (rm_punct,wnl.lemmatize, ),  
+        ]
 
-# Define analysis mix
-analysis_functions = [
-  # in the first tuple we have the preprocessing function applied on 
-  # both documents and features
-  #
-  # Possible Values (1 or more):
-  #   - str.Lower 
-  #   - p_stem.stem 
-  #   - l_stem.stem
-  #   - wnl.lemmatize
-  #   - rm_punct
-  #   - rm_stops
-  #
-  # the second tuple contains the functions applied only on features
-  #
-  # Possible Values 
-  #   - freq_filter
-  #  
-  # the third tuble contains the kind of features to compute
-  #
-  # Possible Values (1 or more):
-  #   - "has_feature"
-  #   - "count_feature"
-  #   - "has_bigram"
-  #   - "count_bigram"
-  #   - "has_trigram"
-  #   - "count_trigram"
-  #   - "count_bcoll"
-  #   - "count_tcoll"
-  #   - "has_bcoll"
-  #   - "has_tcoll"
-  #   - "tf-idf"
- 
- 
- # a-b)
-#==============================================================================
-#     ((str.lower, ),     (freq_filter,),     ("has_feature",)),
-#     ((p_stem.stem, ),   (freq_filter,),     ("has_feature",)),
-#     ((l_stem.stem, ),   (freq_filter,),     ("has_feature",)),
-#     ((wnl.lemmatize, ), (freq_filter,),     ("has_feature",)),        
-#     ((rm_punct,),       (freq_filter,),     ("has_feature",)),
-#     ((rm_stops,),       (freq_filter,),     ("has_feature",)),
-#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("has_feature",)),
-#     ((rm_stops,wnl.lemmatize, ),       (freq_filter,),     ("has_feature",)),
-#     ((rm_punct,p_stem.stem, ),       (freq_filter,),     ("has_feature",)),
-#     ((rm_punct,wnl.lemmatize, ),       (freq_filter,),     ("has_feature",)),
-#==============================================================================
- 
- 
-#==============================================================================
-#  # c)
-#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("has_feature",)),
-#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("has_bigram",)),
-#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("has_trigram",)),
-#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("has_bcoll",)),
-#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("has_tcoll",)),
-#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("count_feature",)),
-#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("count_bigram",)),
-#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("count_trigram",)),
-#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("count_bcoll",)),
-#     ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("count_tcoll",)),
-#==============================================================================
+stepC = [ ("has_feature",),
+          ("has_feature","has_bigram",),
+          ("has_feature","has_trigram",),
+          ("has_feature","has_bcoll",),
+          ("has_feature","has_tcoll",),
+          ("has_feature","count_feature",),
+          ("has_feature","count_bigram",),
+          ("has_feature","count_trigram",),
+          ("has_feature","count_bcoll",),
+          ("has_feature","count_tcoll",),
+          ("has_feature","avg_l_w",),
+          ("has_feature","lex_d",),
+        ]
 
-#d
-    ((rm_stops,p_stem.stem, ),       (freq_filter,),     ("tf-idf",)),
-]
-
+stepD = [ ("has_feature","tf-idf",)
+        ]
 
 #==============================================================================
 #  Run `SAMPLES` times every analyse mix from `analysis_functions` and save
 #  the result (tuple of accuracy, precision, recall, f-measure) to `results`
 #==============================================================================
-SAMPLES = 10
+SAMPLES = 1
 
 results = []
 for i in range(SAMPLES):
     random.shuffle(documents)
-    results.append([])
-    for doc_clean, feat_clean, features_func in analysis_functions:
-        #try:
-        result = analysis(documents, doc_clean, feature_candidates, feat_clean, features_func)
-        #except Exception as e:
-         #   print(e)
-         #   result = (0,0,0,0)
-        print ("Accuracy: {:.2f} - Precision: {:.2f} - Recall: {:.2f} - "
-                "F-measure: {:.2f}".format(*result))
-        results[i].append(result)
-    print("")
-print("")
+    pp = pre_process(documents, stepA[0], feature_candidates, stepA[1],False)
+    results.append(get_results(pp, stepA[2]))
+show_results([results])
 
+results = []
+for i in range(SAMPLES):
+    random.shuffle(documents)
+    for l in range(len(stepB)):
+        results.append([])
+        pp = pre_process(documents, stepB[l], feature_candidates, stepA[1],False)
+        results[l].append(get_results(pp, stepA[2]))
+show_results(results)
 
+results = []        
+for i in range(SAMPLES):
+    random.shuffle(documents)
+    pp = pre_process(documents, stepB[0], feature_candidates, stepA[1],True)
+    for l in range(len(stepC)):
+        results.append([])
+        results[l].append(get_results(pp, stepC[l]))
+show_results(results)
 
-print ("-"*106)
-print ("| {:<10}\t| {:<10}\t| {:<10}\t| {:<10}\t| {:<55}|".format("Acc.","Prec.","Rec.","F-Meas.","Setup"))
-print ("-"*106)
+results = []
+for i in range(SAMPLES):
+    random.shuffle(documents)
+    pp = pre_process(documents, stepB[0],feature_candidates, stepA[1],True)
+    for l in range(len(stepC)):
+        results.append([])
+        results[l].append(get_results(pp, stepD[l]))
+show_results(results)
+ 
+
     
-   
+    
 
-for col in range(len(analysis_functions)):
-    sums = [0, 0, 0, 0]
-    for row in range(SAMPLES):
-        for i in range(len(sums)):
-            sums[i] += results[row][col][i]
-
-    for i in range(len(sums)):
-        sums[i] /= SAMPLES
-    descr = " ".join(elem.__name__ for elem in analysis_functions[col][0]) + " " + " ".join(elem.__name__ for elem in analysis_functions[col][1]) + " " + " ".join(elem for elem in analysis_functions[col][2])    
-    print ("| {0:1.2f}\t| {1:1.2f}\t| {2:1.2f}\t| {3:1.2f}\t| {4:<55}|".format(
-        sums[0],sums[1],sums[2],sums[3],descr[:50])
-    )  
-         
-print ("-"*106)
     
 
 
