@@ -478,7 +478,7 @@ SAMPLES = int(sys.argv[1])
 
 for arg in sys.argv[2:]:
     
-    if arg == "A":
+    if str.lower(arg) == "a":
         results = []
         for i in range(SAMPLES):
             random.shuffle(documents)
@@ -486,7 +486,7 @@ for arg in sys.argv[2:]:
             results.append(get_results(pp, stepA[2]))
         show_results([results],stepA_d)
    
-    if arg == "B":
+    if str.lower(arg) == "b":
         results = []
         for i in range(SAMPLES):
             random.shuffle(documents)
@@ -497,7 +497,7 @@ for arg in sys.argv[2:]:
                 results[l].append(get_results(pp, stepA[2]))
         show_results(results,stepB_d)
     
-    if arg == "C":
+    if str.lower(arg) == "c":
         results = []
         results1 = []                    
         for i in range(SAMPLES):
@@ -517,19 +517,19 @@ for arg in sys.argv[2:]:
         show_results(results,stepC_d)             
         show_results(results1,stepC1_d)        
     
-    if arg == "D":
+    if str.lower(arg) == "d":
         results = []
         results1 = []          
         for i in range(SAMPLES):
             random.shuffle(documents)
             pp = pre_process(documents, stepB[0],feature_candidates, stepA[1],False)
-            for l in range(len(stepD)):
+            for l in range(len(stepD_d)):
                 if l == len(results): 
                     results.append([])
                 results[l].append(get_results(pp, stepD[l]))            
             
             pp = pre_process(documents, stepB[1],feature_candidates, stepA[1],False)
-            for l in range(len(stepD)):
+            for l in range(len(stepD1_d)):
                 if l == len(results1): 
                     results1.append([])
                 results1[l].append(get_results(pp, stepD[l]))
