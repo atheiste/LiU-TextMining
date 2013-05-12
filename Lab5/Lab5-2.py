@@ -1,7 +1,12 @@
 # coding: utf-8
 """
 The application was optimized to run using PyPy 2.0
-
+NOTES: 
+ - In a terminal use the command  "ulimit -S -n 10000" to avoid the "Too many 
+ open files" error 
+ - on MacOS X with pypy 2.0 the lancaster stemmer gives a Segmentation Fault:11
+ to avoid it, comment the corresponding line or run it in python
+ 
 Laboratory 5 - Statistical Models for Textual Data
 @author: seby912 & tompe625
 """
@@ -37,16 +42,6 @@ STOP_WORDS = set(stopwords.words('english'))
 #                           returning a dictionary
 #==============================================================================
 
-def df_feats(documents, features):
-     '''Removes features based on DF value'''
-     features_set = set(features)
-     N = len(documents) // 2
-     X = 600
-     dfs = get_idfs(documents, features_set)
-     # sort according to idf value
-     dfs.sort(key=lambda x: x[1], reverse=True)
-     # take only X words which has df < N
-     return [x[0] for x in dropwhile(lambda x: x[1] > int(N * 1), dfs)][:X]
 
 def avg_w_l_feats(document):
     '''Produces value features "avg<>n: <true|false>" '''
@@ -159,9 +154,9 @@ def count_feats(document, features_words):
 #  Create idfs for a set of keywords
 #==============================================================================
 
-def get_idfs(documents, keywords):
+def get_dfs(documents, keywords, inverse):
     '''
-    Compute IDFS for every keyword
+    Compute DFs for every keyword
     :rvalue: list( tuple(keyword, idf), tuple(keyword, idf) )
     '''
     idfs = []
@@ -171,8 +166,11 @@ def get_idfs(documents, keywords):
         df = 0
         for d in range(N):
             df += int(keyword in doc_sets[d])
-        if df > 0:    
-            idfs.append( (keyword, math.log(N/df,10) ))
+        if df > 0:
+            if inverse:
+                idfs.append((keyword, math.log(N/df,10) ))
+            else:
+                idfs.append((keyword, df))
     return idfs
 
 #==============================================================================
@@ -182,6 +180,18 @@ def get_idfs(documents, keywords):
 def freq_filter(features):
     '''Keeps only 1000 the most frequent features'''
     return nltk.FreqDist(features).keys()[:1000]
+
+def df_filter(features):
+     '''Removes features based on DF value'''
+     features_set = set(features)
+     N = len(documents) // 2
+     X = 600
+     dfs = get_dfs(documents, features_set, False)
+     # sort according to idf value
+     dfs.sort(key=lambda x: x[1], reverse=True)
+     # takes only first X words which have df < N
+     a = [x[0] for x in dropwhile(lambda x: x[1] > int(N * 1), dfs)][:X]
+     return a
    
 
 #==============================================================================
@@ -231,7 +241,7 @@ def pre_process(documents, document_preprocess, features_words,
         trigr = trigrams(features_words)
         bcoll = create_bi_collocations(features_words,document_preprocess)    
         tcoll = create_tri_collocations(features_words,document_preprocess)
-        idf = get_idfs(documents, features_words)  
+        idf = get_dfs(documents, features_words, True)  
     return [documents,features_words,bigr,trigr,bcoll,tcoll,idf]
 
 #==============================================================================
@@ -458,13 +468,14 @@ stepD_d = ["Rm Stop w. + P. Stem. + Has(feat) + Tf-Idf(feat)",
            "Rm Stop w. + P. Stem. + Has(feat)",
            "Rm Stop w. + P. Stem. + Has(feat) + Has(b-coll)",
            "Rm Stop w. + P. Stem. + Has(feat) + Has(t-coll)",
+           "Rm Stop w. + P.St. + H(feat) + H(bcoll) + H(tcoll) + Tf-Idf",
           ]            
         
 stepD1_d = ["Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Tf-Idf(feat)",
-           "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat)",
-           "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Has(b-coll)",
-           "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Has(t-coll)",
-           "RmS. + RmP.  + P.St. + H(feat) + H(bcoll) + H(tcoll) + Tf-Idf",
+            "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat)",
+            "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Has(b-coll)",
+            "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Has(t-coll)",
+            "RmS. + RmP.  + P.St. + H(feat) + H(bcoll) + H(tcoll) + Tf-Idf",
           ]  
 
          
@@ -475,6 +486,9 @@ stepD1_d = ["Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Tf-Idf(feat)",
 #  the result (tuple of accuracy, precision, recall, f-measure) to `results`
 #==============================================================================
 SAMPLES = int(sys.argv[1])
+
+print(df_filter(feature_candidates))
+raw_input()
 
 for arg in sys.argv[2:]:
     
