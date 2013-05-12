@@ -487,9 +487,6 @@ stepD1_d = ["Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Tf-Idf(feat)",
 #==============================================================================
 SAMPLES = int(sys.argv[1])
 
-print(df_filter(feature_candidates))
-raw_input()
-
 for arg in sys.argv[2:]:
     
     if str.lower(arg) == "a":
