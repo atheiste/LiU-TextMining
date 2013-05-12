@@ -285,7 +285,6 @@ def get_results(preprocess_results,features_func):
         
     threshold = int(len(documents)*0.8)
     
-
     # Training    
 
     classifier = nltk.NaiveBayesClassifier.train(featuresets[:threshold])
@@ -332,7 +331,6 @@ def evaluate(classifier, test_set):
 
 def rm_punct(feature):      
     return ''.join([c for c in feature.lower() if re.match("[a-z\-\' \n\t]", c)]) 
-
 
 def rm_stops(feature):
     if feature.lower() in STOP_WORDS:
@@ -431,7 +429,7 @@ stepC_d = ["Rm Stop w. + P. Stem. + Has(feat)",
            "Rm Stop w. + P. Stem. + Has(feat) + Count(trigr)",
            "Rm Stop w. + P. Stem. + Has(feat) + Count(b-coll)",         
            "Rm Stop w. + P. Stem. + Has(feat) + Count(t-coll)",
-           "Rm Stop w. + P. Stem. + Has(feat) + Avarage W. Length",
+           "Rm Stop w. + P. Stem. + Has(feat) + Average W. Length",
            "Rm Stop w. + P. Stem. + Has(feat) + Lexical Diversity",                    
            ]    
 
@@ -453,6 +451,7 @@ stepD = [ ("has_feature","tf-idf",),
           ("has_feature",),
           ("has_feature","has_bcoll",),
           ("has_feature","has_tcoll",),
+          ("has_feature","has_bcoll","has_tcoll","tf-idf"),
         ]
         
 stepD_d = ["Rm Stop w. + P. Stem. + Has(feat) + Tf-Idf(feat)",
@@ -465,7 +464,11 @@ stepD1_d = ["Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Tf-Idf(feat)",
            "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat)",
            "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Has(b-coll)",
            "Rm Stop w. + Rm Puncts  + P. Stem. + Has(feat) + Has(t-coll)",
-          ]            
+           "RmS. + RmP.  + P.St. + H(feat) + H(bcoll) + H(tcoll) + Tf-Idf",
+          ]  
+
+         
+       
 
 #==============================================================================
 #  Run `SAMPLES` times every analyse mix from `analysis_functions` and save
@@ -482,8 +485,7 @@ for arg in sys.argv[2:]:
             pp = pre_process(documents, stepA[0], feature_candidates, stepA[1],True)
             results.append(get_results(pp, stepA[2]))
         show_results([results],stepA_d)
-
-    
+   
     if arg == "B":
         results = []
         for i in range(SAMPLES):
@@ -494,12 +496,10 @@ for arg in sys.argv[2:]:
                 pp = pre_process(documents, stepB[l], feature_candidates, stepA[1],True)
                 results[l].append(get_results(pp, stepA[2]))
         show_results(results,stepB_d)
-
     
     if arg == "C":
         results = []
-        results1 = []
-                    
+        results1 = []                    
         for i in range(SAMPLES):
             random.shuffle(documents)
             pp = pre_process(documents, stepB[0], feature_candidates, stepA[1],False)
@@ -517,11 +517,9 @@ for arg in sys.argv[2:]:
         show_results(results,stepC_d)             
         show_results(results1,stepC1_d)        
     
-    
     if arg == "D":
         results = []
-        results1 = []
-        
+        results1 = []          
         for i in range(SAMPLES):
             random.shuffle(documents)
             pp = pre_process(documents, stepB[0],feature_candidates, stepA[1],False)
@@ -535,12 +533,6 @@ for arg in sys.argv[2:]:
                 if l == len(results1): 
                     results1.append([])
                 results1[l].append(get_results(pp, stepD[l]))
-                
+            
         show_results(results,stepD_d)
         show_results(results1,stepD1_d)
-     
-        
-
-    
-
-
